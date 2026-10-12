@@ -53,6 +53,15 @@ export function connectionStatus(directoryAvailable, config) {
       },
     ];
   }
+  if (config.journeys.invalid.length > 0) {
+    return [
+      true,
+      {
+        en: `Not understood in "Journeys": ${config.journeys.invalid.join(' ; ')}. One journey per line, "Name: address", 5 at most.`,
+        fr: `Non compris dans « Trajets » : ${config.journeys.invalid.join(' ; ')}. Un trajet par ligne, « Nom : adresse », 5 au plus.`,
+      },
+    ];
+  }
   const { status } = getSuggestions();
   if (status === 'no_location') {
     return [

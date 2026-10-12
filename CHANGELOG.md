@@ -10,6 +10,19 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- Journeys from the house: up to 5 destinations typed as "Name: address" in
+  the new "Journeys" setting, one device each ("TBM – Trajet → Travail"):
+  minutes before leaving, duration, arrival, the lines to take, the next
+  options and the status (delay, disruption, cancelled trip). Planned by
+  Transitous with the TBM real time, so the night buses and the incidents
+  are part of it; planned again every 5 minutes ("Journeys recalculation",
+  2 minutes at the fastest), the countdown moving every minute in between.
+- Dashboard widget "TBM journey": when to leave and when you arrive, the
+  lines, and the following options (1 to 5, the best included).
+- "Test the connection" also plans the first journey.
+
 ## [0.0.5] - 2026-10-12
 
 ### Added

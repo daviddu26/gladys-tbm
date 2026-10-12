@@ -56,17 +56,40 @@ Set **Language of the values** to English for English feature names and texts.
    stations: separate them with commas.
 3. Save, then add the devices from the **Discover** tab.
 
+## Journeys from the house
+
+In the **Configuration** page, section **Journeys from the house**, type up to 5 destinations in
+**Journeys**, separated by semicolons, each as "Name: address":
+`Work: 1 place Pey Berland, Bordeaux; Station: Gare Saint-Jean`. The name is optional. Add the town
+when an address is ambiguous: one found more than 60 km from the house is ignored. Save, then add
+the "TBM – Journey → Work" devices from the **Discover** tab.
+
+Journeys start from the address of the house and count the walk to the first stop and from the
+last. [Transitous](https://transitous.org) plans them with the TBM real time: a cancelled trip, a
+delay, a moved stop, or the end of the tram service (the night buses take over) change the journey.
+
+Features: **leave in** (minutes before leaving the house, 999: none), **duration**, **arrival**
+("18:47"), **route** ("Tram A 18:12 → Tram F 18:19"), **next departures** ("18:05 → 18:47 · 18:15 →
+18:55"), **status** ("Normal", "4 min late", "Disrupted: …", "Timetable"; or why the journey cannot
+be planned, and what to do).
+
+A journey is planned again **every 5 minutes** (**Journeys recalculation**, 2 minutes at the
+fastest): Transitous is a volunteer service asking for a light use. In between, "leave in" counts
+down every minute.
+
 ## Settings
 
-| Setting                   | Role                                                   | Default |
-| ------------------------- | ------------------------------------------------------ | ------- |
-| Stations near my home     | how many close stations are proposed (0: none)         | 3       |
-| Search radius (m)         | the farthest a proposed station may be from the house  | 600     |
-| Include the school buses  | also propose the SCODI school lines                    | no      |
-| Stations                  | stations typed by hand                                 | empty   |
-| Refresh interval (s)      | how often the departures are read                      | 60      |
-| Departures in the summary | departures per direction in the "next departures" text | 3       |
-| Language of the values    | language of the feature names and texts                | French  |
+| Setting                    | Role                                                   | Default |
+| -------------------------- | ------------------------------------------------------ | ------- |
+| Stations near my home      | how many close stations are proposed (0: none)         | 3       |
+| Search radius (m)          | the farthest a proposed station may be from the house  | 600     |
+| Include the school buses   | also propose the SCODI school lines                    | no      |
+| Stations                   | stations typed by hand                                 | empty   |
+| Refresh interval (s)       | how often the departures are read                      | 60      |
+| Departures in the summary  | departures per direction in the "next departures" text | 3       |
+| Journeys                   | destinations of the journeys from the house            | empty   |
+| Journeys recalculation (s) | how often the journeys are planned, 120 at least       | 300     |
+| Language of the values     | language of the feature names and texts                | French  |
 
 Replacement buses during works ("Navette Tram", "Bus Relais") are not proposed automatically: add
 them by number in **Stations** if needed.
@@ -85,6 +108,11 @@ where it goes is shown under the title) and the **departures shown** per directi
 included: "Next only" keeps the tiles alone, "3 departures" is the tile and the 2 following. Left
 empty: both directions, 5 departures. Add two widgets for the same line to follow each direction on
 its own.
+
+The **TBM journey** widget shows a journey: a tile with **in how many minutes to leave** and when
+you arrive, the lines to take above it (and what disrupts the journey, if anything), and the
+**next options** below, never repeating the tile's. Settings: the **journey** and the **journeys
+shown** ("Best only" to 5, the best included; empty: 5).
 
 ## Scenes
 
@@ -107,3 +135,7 @@ Real time and network directory: TBM / Bordeaux Métropole,
 under the [Licence Ouverte](https://www.etalab.gouv.fr/licence-ouverte-open-licence/). The
 directory is read once a day; the departures once a minute per station, however many of its lines
 are followed.
+
+Journeys: [Transitous](https://transitous.org/sources/) (free community service, OpenStreetMap
+data and the networks' timetables). The integration names itself to it, keeps the addresses found
+in the container, and plans a journey again only at the configured interval.

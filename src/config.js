@@ -23,8 +23,16 @@ export const DEFAULT_CONFIG = {
   poll_frequency: 60,
   // How many departures per direction the summary text lists.
   max_departures: 3,
+  // Journeys from the house, one per line: "Travail : 1 place Pey Berland".
+  trips: '',
+  // Seconds between two journey plans (Transitous). Planning is its expensive
+  // endpoint: every five minutes, the countdowns moving in between.
+  trips_poll_frequency: 300,
   language: 'fr',
 };
+
+/** At most this many journeys: each one is a plan every few minutes. */
+export const MAX_TRIPS = 5;
 
 /** The bounds of the numeric settings, the same as the manifest's. */
 const BOUNDS = {
@@ -32,6 +40,7 @@ const BOUNDS = {
   nearby_radius: [100, 3000],
   poll_frequency: [60, 900],
   max_departures: [1, 5],
+  trips_poll_frequency: [120, 1800],
 };
 
 function clampNumber(key, value) {
@@ -80,6 +89,54 @@ export function parseStations(value) {
 }
 
 /**
+ * The id of a journey, from its name: "Travail" → "travail", "École Léo" →
+ * "ecole-leo". It is the platform id of the device: renaming the journey
+ * makes a new device.
+ * @param {string} name
+ */
+export function tripSlug(name) {
+  return String(name ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+}
+
+/**
+ * The journeys typed in the "trips" field, one per line or separated by ";"
+ * (an address holds commas): "Travail : 1 place Pey Berland, Bordeaux". The
+ * name before ":" is optional; without it, the address names the journey.
+ * @param {string} value
+ * @returns {{ trips: { slug: string, name: string, address: string }[], invalid: string[] }}
+ */
+export function parseTrips(value) {
+  const trips = [];
+  const invalid = [];
+  const seen = new Set();
+  for (const raw of String(value ?? '').split(/[;\n]/)) {
+    const text = raw.trim();
+    if (!text) continue;
+    const colon = text.indexOf(':');
+    const name = (colon > 0 ? text.slice(0, colon) : text).trim();
+    const address = (colon > 0 ? text.slice(colon + 1) : text).trim();
+    const slug = tripSlug(name);
+    if (!address || address.length < 3 || !slug || seen.has(slug)) {
+      invalid.push(text);
+      continue;
+    }
+    if (trips.length >= MAX_TRIPS) {
+      invalid.push(text);
+      continue;
+    }
+    seen.add(slug);
+    trips.push({ slug, name, address });
+  }
+  return { trips, invalid };
+}
+
+/**
  * Merge the user config with the defaults, with the right types.
  * @param {Record<string, unknown>} raw config returned by the SDK
  */
@@ -90,6 +147,8 @@ export function normalizeConfig(raw = {}) {
   }
   config.include_school_lines = raw.include_school_lines === true;
   config.stations = typeof raw.stations === 'string' ? raw.stations : '';
+  config.trips = typeof raw.trips === 'string' ? raw.trips : '';
+  config.journeys = parseTrips(config.trips);
   config.language = raw.language === 'en' ? 'en' : 'fr';
   config.watched = parseStations(config.stations);
   return config;

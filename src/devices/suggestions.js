@@ -49,7 +49,7 @@ export function clearSuggestions() {
  * @returns {Promise<{ lat: number, lon: number, name: string } | null | undefined>}
  *   null when no house is located, undefined when Gladys refused to tell
  */
-async function homeLocation(gladys) {
+export async function homeLocation(gladys) {
   let houses;
   try {
     houses = await gladys.getHouses();

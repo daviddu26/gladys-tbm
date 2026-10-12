@@ -1,6 +1,7 @@
 // -----------------------------------------------------------------------------
 // Tests never touch the network: `fetch` is replaced by a router answering the
-// SIRI-Lite method found in the URL, and recording every call.
+// SIRI-Lite method found in the URL (or the Transitous one: plan, geocode),
+// and recording every call.
 // -----------------------------------------------------------------------------
 
 import {
@@ -10,6 +11,7 @@ import {
   stopMonitoringPayload,
   stopPointsPayload,
 } from './fixtures.js';
+import { geocodePayload, planPayload } from './transitous.js';
 
 /**
  * Replace the global fetch for the duration of a test.
@@ -24,6 +26,8 @@ export function stubFetch(t, overrides = {}) {
     'stoppoints-discovery': stopPointsPayload,
     'lines-discovery': linesPayload,
     'stop-monitoring': () => stopMonitoringPayload([...hotelDeVilleVisits(), ...laterVisits()]),
+    plan: planPayload,
+    geocode: geocodePayload,
     ...overrides,
   };
   const calls = [];

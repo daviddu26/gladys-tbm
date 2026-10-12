@@ -10,6 +10,12 @@
 //     vehicle is tracked in real time, grey ("~") for a timetable guess,
 //     orange when it runs five minutes late or more.
 //
+// Dashboard widget "journey" (manifest `widgets`): the best journeys from the
+// house to one destination (src/devices/trip.js):
+//   - the tile: in how many minutes to leave, and when you arrive;
+//   - the caption: the lines to take, and what spoils the journey if anything;
+//   - the list: the following options, never the one of the tile again.
+//
 // Nothing here throws at the dashboard: a device removed, or the API down,
 // renders as a card saying so — an empty or failed widget tells nothing.
 // -----------------------------------------------------------------------------
@@ -19,7 +25,9 @@ import {
   WIDGET_COLORS,
   WIDGET_TEXT_VARIANTS,
 } from '@gladysassistant/integration-sdk';
-import { DeviceSelectionError, findSelectedBlueprint } from './devices/index.js';
+import { DeviceSelectionError, findSelectedBlueprint, TRIP_TYPE } from './devices/index.js';
+import { formatRoute, formatStatus, TripError } from './devices/trip.js';
+import { TransitousError } from './api/transitous.js';
 import { directionRank, formatWait } from './devices/stationLine.js';
 import { TbmApiError } from './api/http.js';
 import { formatClock } from './api/departures.js';
@@ -28,13 +36,14 @@ const logger = createLogger({ name: 'widgets' });
 
 /** Widget key, as declared in the manifest. Forever. */
 export const DEPARTURES_WIDGET = 'departures';
+export const JOURNEY_WIDGET = 'journey';
 
 // Countdowns move every minute; the core re-pulls the card at this pace.
 const TTL_SECONDS = 30;
 // The core caps a status list at ten rows.
 const BOARD_ROWS = 10;
 
-const { NEUTRAL, SUCCESS, WARNING } = WIDGET_COLORS;
+const { NEUTRAL, SUCCESS, WARNING, DANGER } = WIDGET_COLORS;
 
 /** Cut a text to the budget of its component. */
 export function truncate(value, max) {
@@ -252,7 +261,117 @@ export function departuresContent(
   return { ttl_seconds: TTL_SECONDS, components };
 }
 
+/** Red when a trip is cancelled, orange when disrupted or 5 minutes late. */
+function journeyColor(journey) {
+  if (journey.cancelled) return DANGER;
+  if (journey.alerts.length > 0 || journey.delayMinutes >= 5) return WARNING;
+  if (journey.walkOnly || journey.realtime) return SUCCESS;
+  return NEUTRAL;
+}
+
+/** "Tram A › Lianes 9", or on foot. */
+function journeyLines(journey, language) {
+  if (journey.walkOnly) return language === 'en' ? 'On foot' : 'À pied';
+  return journey.legs.map((leg) => leg.line).join(' › ');
+}
+
+/**
+ * The card of one journey from the house.
+ * @param {{ name: string }} info
+ * @param {object[]} journeys upcoming, soonest departure first
+ * @param {string} language
+ * @param {{ count?: number }} [options] how many journeys, the tile included
+ */
+export function journeyContent(info, journeys, language = 'fr', { count = DEFAULT_COUNT } = {}) {
+  const components = [
+    {
+      type: 'text',
+      variant: WIDGET_TEXT_VARIANTS.HEADING,
+      text: truncate(language === 'en' ? `Journey → ${info.name}` : `Trajet → ${info.name}`, 40),
+    },
+  ];
+  const [best, ...others] = journeys;
+  if (!best) {
+    components.push({
+      type: 'text',
+      variant: WIDGET_TEXT_VARIANTS.BODY,
+      text: { en: 'No journey found for now.', fr: 'Aucun trajet trouvé pour l’instant.' },
+    });
+    return { ttl_seconds: TTL_SECONDS, components };
+  }
+
+  // The caption: what spoils the best journey first, then its lines (cut to
+  // the room left), then the timetable note.
+  const status = { en: formatStatus(best, 'en'), fr: formatStatus(best, 'fr') };
+  const notes = [];
+  if (best.cancelled || best.alerts.length > 0 || best.delayMinutes >= 2) {
+    notes.push({ rank: 1, en: `${status.en}.`, fr: `${status.fr}.` });
+  }
+  const route = { en: formatRoute(best, 'en'), fr: formatRoute(best, 'fr') };
+  notes.unshift({
+    rank: 2,
+    fit: (room) => ({ en: truncate(route.en, room.en), fr: truncate(route.fr, room.fr) }),
+  });
+  if (!best.walkOnly && !best.realtime) {
+    notes.push({ rank: 3, en: '~ timetable.', fr: '~ horaire théorique.' });
+  }
+  const text = captionText(notes);
+  if (text) components.push({ type: 'text', variant: WIDGET_TEXT_VARIANTS.CAPTION, text });
+
+  components.push({
+    type: 'value',
+    value: best.leaveMinutes,
+    unit: 'min',
+    label: {
+      en: truncate(`leave · arrive ${formatClock(best.end)}`, 24),
+      fr: truncate(`partir · arrivée ${formatClock(best.end)}`, 24),
+    },
+    icon: 'clock',
+    color: journeyColor(best),
+  });
+
+  const list = others.slice(0, Math.max(0, count - 1));
+  if (list.length > 0) {
+    components.push({
+      type: 'status',
+      items: list.map((journey) => ({
+        label: truncate(
+          `${formatClock(journey.start)} → ${formatClock(journey.end)} · ${journeyLines(journey, language)}`,
+          40,
+        ),
+        value:
+          language === 'en' ? `in ${journey.leaveMinutes} min` : `dans ${journey.leaveMinutes} min`,
+        color: journeyColor(journey),
+      })),
+    });
+  }
+  return { ttl_seconds: TTL_SECONDS, components };
+}
+
 export const WIDGETS = {
+  [JOURNEY_WIDGET]: {
+    async get(gladys, { settings, language, config }) {
+      let blueprint;
+      try {
+        blueprint = findSelectedBlueprint(gladys, settings?.device, config, TRIP_TYPE);
+      } catch (err) {
+        if (err instanceof DeviceSelectionError) return messageContent(err.userMessage, 300);
+        throw err;
+      }
+      try {
+        const { journeys } = await blueprint.read(gladys, config);
+        return journeyContent(blueprint.describe(), journeys, language === 'en' ? 'en' : 'fr', {
+          count: selectedCount(settings?.count),
+        });
+      } catch (err) {
+        if (err instanceof TripError || err instanceof TransitousError) {
+          logger.warn(`Widget ${JOURNEY_WIDGET}: ${err.message}`);
+          return messageContent(err.userMessage, 60);
+        }
+        throw err;
+      }
+    },
+  },
   [DEPARTURES_WIDGET]: {
     async get(gladys, { settings, language, config }) {
       let blueprint;

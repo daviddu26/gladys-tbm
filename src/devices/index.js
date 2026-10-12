@@ -1,7 +1,11 @@
 // -----------------------------------------------------------------------------
 // Device registry.
 //
-// The device list is not a static catalog: one device per line followed at a
+// Two device types: a line at a station (src/devices/stationLine.js) and a
+// journey from the house (src/devices/trip.js, one per destination of the
+// "trips" field, or created earlier and rebuilt from its params).
+//
+// The list of lines is not a static catalog: one device per line followed at a
 // station, built from three sources merged by device identity:
 //   1. the stations typed in the configuration ("THDVA@A");
 //   2. the suggestions: the lines of the stations closest to the house
@@ -26,6 +30,9 @@ import {
 import { fetchStationDepartures, upcoming, formatClock } from '../api/departures.js';
 import { TbmApiError } from '../api/http.js';
 import { createStationLineBlueprint, DEVICE_TYPE } from './stationLine.js';
+import { createTripBlueprint, DEVICE_TYPE as TRIP_TYPE, TripError } from './trip.js';
+import { TransitousError } from '../api/transitous.js';
+import { tripSlug } from '../config.js';
 import { getSuggestions, suggestedModes } from './suggestions.js';
 import { publishDepartureEvents } from '../triggers.js';
 
@@ -51,6 +58,21 @@ export function createdEntries(gladys) {
     entries.push({ station, line, directions });
   }
   return entries;
+}
+
+/**
+ * The journeys behind the trip devices the user created (their params).
+ * @param {object} gladys
+ */
+export function createdTrips(gladys) {
+  const trips = [];
+  for (const device of gladys?.devices ?? []) {
+    const name = paramValue(device, 'trip_name');
+    const address = paramValue(device, 'trip_address');
+    if (!name || !address) continue;
+    trips.push({ slug: tripSlug(name), name, address });
+  }
+  return trips;
 }
 
 /**
@@ -107,6 +129,14 @@ export function buildBlueprints(gladys, config) {
       createStationLineBlueprint({ ...entry, directions: createdDirections.get(id) ?? [] }),
     );
   }
+  // The journeys of the configuration first: a destination edited there
+  // replaces the address of the device created before.
+  const trips = new Set();
+  for (const trip of [...config.journeys.trips, ...createdTrips(gladys)]) {
+    if (trips.has(trip.slug)) continue;
+    trips.add(trip.slug);
+    blueprints.push(createTripBlueprint(trip));
+  }
   return blueprints;
 }
 
@@ -148,14 +178,24 @@ export class DeviceSelectionError extends Error {
  * The blueprint behind the device a widget or a scene action was set up with.
  * @throws {DeviceSelectionError}
  */
-export function findSelectedBlueprint(gladys, deviceExternalId, config) {
+export function findSelectedBlueprint(gladys, deviceExternalId, config, type = DEVICE_TYPE) {
+  const choose =
+    type === TRIP_TYPE
+      ? {
+          en: 'Choose a TBM journey in the settings.',
+          fr: 'Choisissez un trajet TBM dans les réglages.',
+        }
+      : {
+          en: 'Choose a TBM line in the settings.',
+          fr: 'Choisissez une ligne TBM dans les réglages.',
+        };
   if (typeof deviceExternalId !== 'string' || deviceExternalId.length === 0) {
-    throw new DeviceSelectionError({
-      en: 'Choose a TBM line in the settings.',
-      fr: 'Choisissez une ligne TBM dans les réglages.',
-    });
+    throw new DeviceSelectionError(choose);
   }
   const blueprint = findBlueprintByDevice(gladys, { external_id: deviceExternalId }, config);
+  // A journey chosen in the departures widget, or the reverse: say which kind
+  // of device the card expects.
+  if (blueprint && blueprint.type !== type) throw new DeviceSelectionError(choose);
   if (!blueprint) {
     throw new DeviceSelectionError({
       en: 'This device is no longer known to the integration: add it again, or choose another one.',
@@ -187,6 +227,12 @@ export function createPoller() {
       logger.debug(`onPoll ignored, ${device.external_id} is not a known device`);
       return false;
     }
+    // A journey publishes its countdown every minute; it plans again only
+    // when its last plan is older than `trips_poll_frequency` (trip.js).
+    if (blueprint.type === TRIP_TYPE) {
+      await blueprint.onPoll(gladys, config, { now });
+      return true;
+    }
     const last = lastReads.get(blueprint.key);
     if (
       !force &&
@@ -208,6 +254,39 @@ function describeStation(dir, station) {
     .filter((line) => line.mode !== 'service')
     .map((line) => line.name);
   return `${station.code} — ${station.name}${lines.length ? ` : ${lines.join(', ')}` : ''}`;
+}
+
+/**
+ * The first journey of the configuration, planned now, for "Test the
+ * connection": the line says whether Transitous answers and what it found.
+ */
+async function describeFirstTrip(gladys, config) {
+  const [trip] = config.journeys.trips;
+  if (!trip) return null;
+  try {
+    const { journeys, place } = await createTripBlueprint(trip).read(gladys, config, {
+      fresh: true,
+    });
+    const [next] = journeys;
+    if (!next) {
+      return {
+        en: `Journey "${trip.name}" (${place.name}): no journey found now.`,
+        fr: `Trajet « ${trip.name} » (${place.name}) : aucun trajet trouvé pour l’instant.`,
+      };
+    }
+    return {
+      en: `Journey "${trip.name}" (${place.name}): leave at ${formatClock(next.start)}, arrive at ${formatClock(next.end)}.`,
+      fr: `Trajet « ${trip.name} » (${place.name}) : départ ${formatClock(next.start)}, arrivée ${formatClock(next.end)}.`,
+    };
+  } catch (err) {
+    if (err instanceof TripError || err instanceof TransitousError) {
+      return {
+        en: `Journey "${trip.name}": ${err.userMessage.en}`,
+        fr: `Trajet « ${trip.name} » : ${err.userMessage.fr}`,
+      };
+    }
+    throw err;
+  }
 }
 
 /** Handlers of the manifest actions (the buttons of the Configuration screen). */
@@ -276,9 +355,14 @@ const RAW_ACTIONS = {
         fr: 'Stations près de la maison : pas encore recherchées.',
       },
     }[suggestions.status];
+    const journey = await describeFirstTrip(gladys, config);
     return {
-      en: [`TBM API OK: ${stations} stations, ${lines} lines.`, sample.en, near.en].join('\n'),
-      fr: [`API TBM OK : ${stations} stations, ${lines} lignes.`, sample.fr, near.fr].join('\n'),
+      en: [`TBM API OK: ${stations} stations, ${lines} lines.`, sample.en, near.en, journey?.en]
+        .filter(Boolean)
+        .join('\n'),
+      fr: [`API TBM OK : ${stations} stations, ${lines} lignes.`, sample.fr, near.fr, journey?.fr]
+        .filter(Boolean)
+        .join('\n'),
     };
   },
 };
@@ -304,4 +388,4 @@ export const ACTIONS = Object.fromEntries(
   ]),
 );
 
-export { DEVICE_TYPE };
+export { DEVICE_TYPE, TRIP_TYPE };

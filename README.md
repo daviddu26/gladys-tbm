@@ -7,8 +7,11 @@ network of Bordeaux Métropole (trams, buses, boats) into your smart home:
   station: minutes to wait, destination of the vehicle, the following one, delay;
 - **the stations near your home proposed by themselves** in the Discover tab, from the address of
   the house in Gladys;
-- a **dashboard widget** (departure board), a **scene trigger** ("departure approaching") and a
-  **scene action** ("read the next departure").
+- **journeys from the house** to the addresses you choose: when to leave, which lines, when you
+  arrive, in real time with the night lines and the disruptions (planned by
+  [Transitous](https://transitous.org));
+- **dashboard widgets** (departure board, journey), a **scene trigger** ("departure approaching")
+  and a **scene action** ("read the next departure").
 
 **No account, no key:** the TBM real time is open data.
 
@@ -21,7 +24,9 @@ User documentation: [français](docs/fr.md) · [English](docs/en.md).
 | Kind             | Content                                                                                   |
 | ---------------- | ----------------------------------------------------------------------------------------- |
 | Devices          | one per line at a station; per direction: next departure, destination, following, summary |
-| Dashboard widget | departures board of a line at a station, both directions                                  |
+| Devices          | one per journey from the house: leave in, duration, arrival, route, options, status       |
+| Dashboard widget | departures board of a line at a station, one direction or both                            |
+| Dashboard widget | journey: when to leave, the lines, the next options                                       |
 | Scene trigger    | departure approaching (1–15 min), per direction                                           |
 | Scene action     | read the next departure                                                                   |
 | Buttons          | find a station by name, test the connection                                               |
@@ -41,6 +46,12 @@ the open data set:
   vehicle is tracked. One request per station and per minute, shared by all its devices.
 
 The feed has no cancellation flag: a vehicle not tracked yet shows its timetable time, marked "~".
+
+**Journeys** come from [Transitous](https://transitous.org/api/) (MOTIS 2): `/api/v1/geocode`
+finds the addresses typed by the user near the house (kept in `/data`), `/api/v6/plan` plans the
+journeys from the house, with the TBM real time Transitous loads. Its policy (open source,
+non-commercial, a User-Agent with a contact, light use) is why a journey is planned again every 5
+minutes at most by default, 2 at the fastest.
 
 ## Development
 

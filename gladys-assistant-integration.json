@@ -100,6 +100,35 @@
       "placeholder": { "en": "THDVA, BQUIOR@2|5", "fr": "THDVA, BQUIOR@2|5" }
     },
     {
+      "key": "journeys",
+      "type": "section",
+      "label": { "en": "Journeys from the house", "fr": "Trajets depuis la maison" },
+      "description": {
+        "en": "The best journeys from your house to the places you go, in real time, with the night lines and the disruptions. Planned by Transitous, a free community service.",
+        "fr": "Les meilleurs trajets de votre maison vers les endroits où vous allez, en temps réel, avec les lignes de nuit et les perturbations. Calculés par Transitous, un service communautaire gratuit."
+      },
+      "links": [
+        {
+          "url": "https://transitous.org/sources/",
+          "label": { "en": "Journey data (Transitous)", "fr": "Données des trajets (Transitous)" }
+        }
+      ]
+    },
+    {
+      "key": "trips",
+      "type": "string",
+      "label": { "en": "Journeys", "fr": "Trajets" },
+      "description": {
+        "en": "Up to 5 destinations separated by semicolons, each as \"Name: address\". One device per journey appears in the Discover tab.",
+        "fr": "Jusqu’à 5 destinations séparées par des points-virgules, chacune sous la forme « Nom : adresse ». Un appareil par trajet apparaît dans l’onglet Découverte."
+      },
+      "required": false,
+      "placeholder": {
+        "en": "Work: 1 place Pey Berland, Bordeaux; Station: Gare Saint-Jean",
+        "fr": "Travail : 1 place Pey Berland, Bordeaux ; Gare : Gare Saint-Jean"
+      }
+    },
+    {
       "key": "advanced",
       "type": "section",
       "label": { "en": "Advanced", "fr": "Avancé" },
@@ -120,6 +149,19 @@
       "default": 60,
       "min": 60,
       "max": 900
+    },
+    {
+      "key": "trips_poll_frequency",
+      "type": "number",
+      "label": { "en": "Journeys recalculation (s)", "fr": "Recalcul des trajets (s)" },
+      "description": {
+        "en": "How often the journeys are planned again, in seconds (2 minutes minimum: Transitous asks for a light use). The countdowns move every minute in between.",
+        "fr": "Fréquence de recalcul des trajets, en secondes (2 minutes minimum : Transitous demande un usage modéré). Les comptes à rebours avancent chaque minute entre deux calculs."
+      },
+      "required": false,
+      "default": 300,
+      "min": 120,
+      "max": 1800
     },
     {
       "key": "max_departures",
@@ -369,6 +411,40 @@
             { "value": "3", "label": { "en": "3 departures", "fr": "3 passages" } },
             { "value": "4", "label": { "en": "4 departures", "fr": "4 passages" } },
             { "value": "5", "label": { "en": "5 departures", "fr": "5 passages" } }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "journey",
+      "label": { "en": "TBM journey", "fr": "Trajet TBM" },
+      "description": {
+        "en": "When to leave the house, when you arrive, and the next options of a journey.",
+        "fr": "Quand partir de la maison, l’heure d’arrivée et les options suivantes d’un trajet."
+      },
+      "icon": "map",
+      "settings": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Journey", "fr": "Trajet" },
+          "required": true
+        },
+        {
+          "key": "count",
+          "type": "select",
+          "label": { "en": "Journeys shown", "fr": "Trajets affichés" },
+          "description": {
+            "en": "The best one included. 1: the best journey only. Empty: 5.",
+            "fr": "Le meilleur compris. 1 : le meilleur trajet seulement. Vide : 5."
+          },
+          "options": [
+            { "value": "1", "label": { "en": "Best only", "fr": "Le meilleur seulement" } },
+            { "value": "2", "label": { "en": "2 journeys", "fr": "2 trajets" } },
+            { "value": "3", "label": { "en": "3 journeys", "fr": "3 trajets" } },
+            { "value": "4", "label": { "en": "4 journeys", "fr": "4 trajets" } },
+            { "value": "5", "label": { "en": "5 journeys", "fr": "5 trajets" } }
           ]
         }
       ]

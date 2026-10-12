@@ -5,7 +5,12 @@ bateaux du réseau **TBM** (Bordeaux Métropole), **sens par sens** : pour chaqu
 station, vous savez dans combien de minutes passe le prochain véhicule de chaque sens, et où il
 va.
 
-Pas de compte, pas de clé : le temps réel TBM est publié en données ouvertes.
+Elle calcule aussi vos **trajets depuis la maison** vers les adresses de votre choix (travail,
+école, gare…) : quand partir, par quelles lignes, à quelle heure vous arrivez — en temps réel, avec
+les lignes de nuit et les perturbations.
+
+Pas de compte, pas de clé : le temps réel TBM est publié en données ouvertes, et les trajets sont
+calculés par [Transitous](https://transitous.org), un service communautaire gratuit.
 
 > Intégration communautaire, sans lien avec TBM, Keolis Bordeaux Métropole Mobilités ou Bordeaux
 > Métropole.
@@ -82,6 +87,41 @@ Pour une station qui n'est pas près de chez vous (travail, école…) :
 
 Un code mal saisi est signalé dans l'état de la connexion, en haut de la page de configuration.
 
+## Trajets depuis la maison
+
+Dans la page **Configuration**, section **Trajets depuis la maison**, saisissez jusqu'à 5
+destinations dans le champ **Trajets**, séparées par des points-virgules, chacune sous la forme
+« Nom : adresse » :
+
+```
+Travail : 1 place Pey Berland, Bordeaux ; Gare : Gare Saint-Jean
+```
+
+Le nom est facultatif (sans lui, l'adresse sert de nom). Ajoutez la ville si l'adresse est
+ambiguë : une adresse trouvée à plus de 60 km de la maison est ignorée. Enregistrez, puis ajoutez
+les appareils « TBM – Trajet → Travail » depuis l'onglet **Découverte**.
+
+Les trajets partent de l'adresse de la maison (Paramètres → Maisons) et comptent la marche
+jusqu'au premier arrêt et depuis le dernier. Ils sont calculés par Transitous avec le temps réel
+TBM : une course supprimée, un retard, un arrêt déplacé, ou la fin du service des trams (les bus
+de nuit prennent le relais) changent le trajet proposé.
+
+| Fonctionnalité        | Valeur                                                                   |
+| --------------------- | ------------------------------------------------------------------------ |
+| **partir dans**       | minutes avant de quitter la maison (999 : aucun trajet trouvé)           |
+| **durée**             | minutes de la maison à la destination                                    |
+| **arrivée**           | heure d'arrivée, « 18:47 »                                               |
+| **itinéraire**        | les lignes à prendre, « Tram A 18:12 → Tram F 18:19 »                    |
+| **prochains départs** | les options suivantes, « 18:05 → 18:47 · 18:15 → 18:55 »                 |
+| **état**              | « Normal », « Retard de 4 min », « Perturbé : … », « Horaire théorique » |
+
+Un trajet est **recalculé toutes les 5 minutes** (réglage **Recalcul des trajets**, 2 minutes au
+plus vite) : Transitous est un service bénévole qui demande un usage modéré. Entre deux calculs,
+« partir dans » continue de décompter chaque minute.
+
+Si un trajet ne peut pas être calculé (maison sans adresse, adresse introuvable, Transitous
+indisponible), son **état** dit pourquoi et que faire.
+
 ## Réglages
 
 | Réglage                   | Rôle                                                             | Défaut   |
@@ -92,6 +132,8 @@ Un code mal saisi est signalé dans l'état de la connexion, en haut de la page 
 | Stations                  | stations saisies à la main (voir plus haut)                      | vide     |
 | Rafraîchissement (s)      | fréquence de lecture des passages                                | 60       |
 | Passages dans le résumé   | nombre de passages par sens dans le texte « prochains passages » | 3        |
+| Trajets                   | destinations des trajets depuis la maison (voir plus haut)       | vide     |
+| Recalcul des trajets (s)  | fréquence de calcul des trajets, 120 au minimum                  | 300      |
 | Langue des valeurs        | langue des noms de fonctionnalités et des textes                 | français |
 
 Les **bus de remplacement** pendant des travaux (« Navette Tram », « Bus Relais ») ne sont pas
@@ -116,6 +158,17 @@ Ajoutez-le depuis l'édition du tableau de bord, puis choisissez dans ses régla
   seulement » n'affiche que la tuile ; « 3 passages », la tuile et les 2 suivants. Laissé vide : 5.
 
 Pour suivre les deux sens séparément, ajoutez deux widgets sur la même ligne, un par sens.
+
+### Widget « Trajet TBM »
+
+Pour un trajet : une tuile dit **dans combien de minutes partir** et à quelle heure vous arrivez ;
+au-dessus, les lignes à prendre (et ce qui perturbe le trajet, s'il y a lieu) ; en dessous, les
+**options suivantes**, sans répéter celle de la tuile. Vert : suivi en temps réel ; gris : horaire
+théorique ; orange : perturbation ou retard d'au moins 5 minutes ; rouge : une course du trajet est
+supprimée.
+
+Réglages : le **trajet**, et les **trajets affichés** (de « Le meilleur seulement » à 5, le meilleur
+compris ; vide : 5).
 
 ## Scènes
 
@@ -142,7 +195,8 @@ et la phrase toute faite, à envoyer en notification ou à faire annoncer.
 
 - **Chercher une station** — trouve le code d'une station par son nom.
 - **Tester la connexion** — interroge TBM tout de suite et affiche le nombre de stations, le
-  prochain passage d'une de vos stations et ce qui a été trouvé près de la maison.
+  prochain passage d'une de vos stations, ce qui a été trouvé près de la maison et, si vous avez
+  saisi des trajets, le prochain départ du premier.
 
 ## Dépannage
 
@@ -161,3 +215,7 @@ Données temps réel et annuaire du réseau : TBM / Bordeaux Métropole, jeu
 sous [Licence Ouverte](https://www.etalab.gouv.fr/licence-ouverte-open-licence/). L'annuaire des
 stations et des lignes est relu une fois par jour et gardé dans le conteneur ; les passages sont
 lus une fois par minute et par station, quel que soit le nombre de lignes suivies.
+
+Trajets : [Transitous](https://transitous.org/sources/) (service communautaire gratuit, données
+OpenStreetMap et horaires des réseaux). L'intégration s'identifie auprès de lui, garde les adresses
+trouvées dans le conteneur et ne recalcule un trajet qu'à l'intervalle réglé.

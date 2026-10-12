@@ -35,7 +35,10 @@ boats), read from the TBM SIRI-Lite API with its public open-data key. One
 read-only device per **line at a station**, with four features per direction
 (next departure, destination, following departure, summary). The stations near
 the house are proposed in the Discover tab (`location: true`, `getHouses()`).
-Journey planning (Transitous) is planned for a later version, not here yet.
+
+Journeys from the house (Transitous): one read-only device per destination of
+the `trips` field ("Travail : 1 place Pey Berland"), with the minutes before
+leaving, duration, arrival, route, next options and status, and a widget.
 
 ## Architecture
 
@@ -47,10 +50,12 @@ src/api/directory.js              stations (stop areas) and lines, cached a day 
 src/api/departures.js             stop-monitoring of a station, shared between its devices
 src/devices/index.js              registry: configured + suggested + created devices, poller, actions
 src/devices/stationLine.js        the device type: a line at a station, both directions
-src/devices/suggestions.js        the stations near the house
+src/devices/suggestions.js        the stations near the house, and the house location
+src/devices/trip.js               the device type: a journey from the house (Transitous)
+src/api/transitous.js             Transitous: geocode (cached in /data), plan, TransitousError
 src/triggers.js                   scene trigger "departure_approaching"
 src/scenes.js                     scene action "get_next_departures"
-src/widgets.js                    dashboard widget "departures"
+src/widgets.js                    dashboard widgets "departures" and "journey"
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
 docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
@@ -80,6 +85,23 @@ MonitoredCall.{AimedDepartureTime, ExpectedDepartureTime, ...}}`. No expected
   rename them. The platform id is `<station>-<line>`.
 - Never commit a personal stop: use network landmarks (Hôtel de Ville THDVA,
   Palais de Justice TPJUST, Quinconces BQUIOR) in examples and tests.
+
+## What is known of Transitous
+
+- MOTIS 2 API at `https://api.transitous.org/api` (`/v1/geocode`, `/v6/plan`),
+  OpenAPI v2.10.2. Its TBM feed is the same open data (GTFS, GTFS-RT
+  TripUpdates, SIRI-Lite): delays, cancellations and the night lines come with
+  the plan. Policy: open source, non-commercial, User-Agent with a contact,
+  light use — contact the maintainers (Matrix) before the integration gets many
+  users. Hence `trips_poll_frequency` (300 s, 120 s minimum) and the places
+  geocoded once and kept in `/data/places.json`.
+- **Not checked against the live API yet**: api.transitous.org was out of reach
+  of the development sandbox on 2026-10-12. `test/helpers/transitous.js`
+  follows the OpenAPI; check a real answer (route short names of TBM, alerts)
+  on the first live run and fix the fixtures with it.
+- Device params `trip_name`, `trip_address` rebuild a created journey; its
+  platform id is the slug of the name (`tripSlug`): renaming a journey makes a
+  new device.
 
 ## Rules
 
