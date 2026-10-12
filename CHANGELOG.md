@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-12
+
 ### Changed
 
 - First public beta: published in the Gladys store. The documentation says
@@ -120,7 +122,8 @@ the notes of the version's GitHub Release.
 - The network directory is read once a day and kept in `/data`: a restart or an
   API outage keeps the stations known.
 
-[Unreleased]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.7...HEAD
+[Unreleased]: https://github.com/daviddu26/gladys-tbm/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.7...v0.1.0
 [0.0.7]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.4...v0.0.5
