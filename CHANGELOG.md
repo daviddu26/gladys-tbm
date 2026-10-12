@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-10-12
+
 ### Added
 
 - Widget: a "Both directions" choice in the "Direction" setting (leaving it
@@ -78,7 +80,8 @@ the notes of the version's GitHub Release.
 - The network directory is read once a day and kept in `/data`: a restart or an
   API outage keeps the stations known.
 
-[Unreleased]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.4...HEAD
+[Unreleased]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.5...HEAD
+[0.0.5]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.1...v0.0.2
