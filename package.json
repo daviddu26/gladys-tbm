@@ -1,6 +1,6 @@
 {
   "name": "gladys-tbm",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "private": true,
   "description": "Gladys Assistant external integration for TBM (Bordeaux): real-time departures of the trams, buses and boats, by direction.",
   "type": "module",
