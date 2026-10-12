@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [0.0.1] - 2026-10-12
+
 ### Added
 
 - Real-time departures of the TBM network (Bordeaux): one device per line
@@ -26,4 +28,5 @@ the notes of the version's GitHub Release.
 - The network directory is read once a day and kept in `/data`: a restart or an
   API outage keeps the stations known.
 
-[Unreleased]: https://github.com/daviddu26/gladys-tbm/commits/main
+[Unreleased]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.1...HEAD
+[0.0.1]: https://github.com/daviddu26/gladys-tbm/releases/tag/v0.0.1
