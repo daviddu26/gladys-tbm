@@ -227,7 +227,9 @@ export function legLineName(leg, lineName = () => undefined) {
 }
 
 /**
- * The itineraries of a plan answer, soonest departure first.
+ * The itineraries of a plan answer, soonest ARRIVAL first: what matters is
+ * when you get there. At the same arrival, the one leaving last comes first
+ * (less waiting on the way).
  *
  * @param {unknown} payload
  * @param {(code: string) => string | undefined} [lineName]
@@ -284,7 +286,7 @@ export function parsePlan(payload, lineName) {
       alerts: [...alerts],
     });
   }
-  return itineraries.sort((a, b) => a.start - b.start || a.end - b.end);
+  return itineraries.sort((a, b) => a.end - b.end || b.start - a.start);
 }
 
 /**

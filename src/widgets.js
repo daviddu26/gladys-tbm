@@ -339,12 +339,17 @@ export function journeyContent(info, journeys, language = 'fr', { count = DEFAUL
     components.push({
       type: 'status',
       items: list.map((journey) => ({
+        // The arrival first: the journeys are ranked by it.
         label: truncate(
-          `${formatClock(journey.start)} → ${formatClock(journey.end)} · ${journeyLines(journey, language)}`,
+          language === 'en'
+            ? `Arrive ${formatClock(journey.end)} · ${journeyLines(journey, language)}`
+            : `Arrivée ${formatClock(journey.end)} · ${journeyLines(journey, language)}`,
           40,
         ),
         value:
-          language === 'en' ? `in ${journey.leaveMinutes} min` : `dans ${journey.leaveMinutes} min`,
+          language === 'en'
+            ? `leave in ${journey.leaveMinutes} min`
+            : `partir dans ${journey.leaveMinutes} min`,
         color: journeyColor(journey),
       })),
     });

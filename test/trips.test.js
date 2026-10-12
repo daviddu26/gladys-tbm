@@ -98,6 +98,32 @@ test('a plan answer becomes journeys: lines named as people say them, soonest fi
   assert.throws(() => parsePlan({}), { name: 'TransitousError' });
 });
 
+test('the journeys are ranked by arrival, not by departure', () => {
+  const payload = planPayload();
+  // Leaves first (in 1 minute) but arrives last: a slow bus.
+  payload.itineraries.push({
+    id: 'slow',
+    duration: 59 * 60,
+    startTime: new Date(NOW + 60_000).toISOString(),
+    endTime: new Date(NOW + 60 * 60_000).toISOString(),
+    transfers: 0,
+    legs: [],
+  });
+  // Arrives with it-1 (in 25 minutes) but leaves later: less waiting, first.
+  payload.itineraries.push({
+    id: 'same-arrival-later',
+    duration: 15 * 60,
+    startTime: new Date(NOW + 10 * 60_000).toISOString(),
+    endTime: new Date(NOW + 25 * 60_000).toISOString(),
+    transfers: 0,
+    legs: [],
+  });
+  assert.deepEqual(
+    parsePlan(payload, lineName).map((journey) => journey.id),
+    ['it-0', 'same-arrival-later', 'it-1', 'it-2', 'it-3', 'slow'],
+  );
+});
+
 test('a line unknown to TBM is named by its mode', () => {
   // A train is "TER": its route name is a train number (seen live: "TER 866266").
   assert.equal(legLineName({ mode: 'REGIONAL_RAIL', routeShortName: 'K32' }), 'TER');
@@ -180,7 +206,19 @@ test('without a house address, or with an address not found, the journey says wh
 
 test('the texts of a journey', () => {
   const [, best, lianes, cancelled] = parsePlan(planPayload(), lineName);
-  assert.equal(formatRoute(best), `Tram A ${clock(7)} → Tram F ${clock(14)}`);
+  assert.equal(
+    formatRoute(best),
+    `Tram A ${clock(7)}, changer à Porte de Bourgogne : Tram F ${clock(14)}`,
+  );
+  // The next line leaves from another stop: the walk is said.
+  const walking = {
+    ...best,
+    legs: [best.legs[0], { ...best.legs[1], from: 'Porte de Bourgogne (quai Richelieu)' }],
+  };
+  assert.equal(
+    formatRoute(walking, 'en'),
+    `Tram A ${clock(7)}, get off at Porte de Bourgogne, walk to Porte de Bourgogne (quai Richelieu): Tram F ${clock(14)}`,
+  );
   assert.equal(formatRoute(undefined), 'Aucun trajet trouvé');
   // A leg without real time is marked "~", as on the departures.
   assert.equal(formatRoute(lianes), `Lianes 2 ~${clock(14)}`);
@@ -277,7 +315,10 @@ test('the journey widget: when to leave, the lines, the next options without the
   assert.deepEqual(validateWidgetContent(content), []);
   const [heading, caption, tile, list] = content.components;
   assert.equal(heading.text, 'Trajet → Gare');
-  assert.equal(caption.text.fr, `Tram A ${clock(7)} → Tram F ${clock(14)}`);
+  assert.equal(
+    caption.text.fr,
+    `Tram A ${clock(7)}, changer à Porte de Bourgogne : Tram F ${clock(14)}`,
+  );
   assert.deepEqual(
     [tile.value, tile.label.fr, tile.color],
     [4, `Tram A › Tram F → ${clock(25)}`, 'success'],
@@ -285,8 +326,8 @@ test('the journey widget: when to leave, the lines, the next options without the
   assert.deepEqual(
     list.items.map((item) => [item.label, item.value, item.color]),
     [
-      [`${clock(11)} → ${clock(34)} · Lianes 2`, 'dans 11 min', 'warning'],
-      [`${clock(19)} → ${clock(40)} · Tram A › Tram F`, 'dans 19 min', 'danger'],
+      [`Arrivée ${clock(34)} · Lianes 2`, 'partir dans 11 min', 'warning'],
+      [`Arrivée ${clock(40)} · Tram A › Tram F`, 'partir dans 19 min', 'danger'],
     ],
   );
   const best = journeyContent({ name: 'Gare' }, journeys, 'fr', { count: 1 });

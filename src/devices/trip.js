@@ -1,6 +1,9 @@
 // -----------------------------------------------------------------------------
 // Device type: A JOURNEY FROM THE HOUSE
 //
+// The journeys are ranked by ARRIVAL: the first one is the one that gets you
+// there soonest, which may leave later than another.
+//
 // One device per destination typed in the "trips" field ("Travail : 1 place
 // Pey Berland"): "TBM – Trajet → Travail". Transitous plans the best journeys
 // from the house to that address, leaving now, with the TBM real time: a
@@ -66,6 +69,8 @@ const LABELS = {
     status: 'état',
     none: 'Aucun trajet trouvé',
     walk: (minutes) => `À pied, ${minutes} min`,
+    change: (stop) => `, changer à ${stop} : `,
+    walkTo: (from, to) => `, descendre à ${from}, à pied jusqu’à ${to} : `,
     normal: 'Normal',
     timetable: 'Horaire théorique',
     late: (minutes) => `Retard de ${minutes} min`,
@@ -82,6 +87,8 @@ const LABELS = {
     status: 'status',
     none: 'No journey found',
     walk: (minutes) => `On foot, ${minutes} min`,
+    change: (stop) => `, change at ${stop}: `,
+    walkTo: (from, to) => `, get off at ${from}, walk to ${to}: `,
     normal: 'Normal',
     timetable: 'Timetable',
     late: (minutes) => `${minutes} min late`,
@@ -109,15 +116,27 @@ function lineNameFromDirectory(code) {
 }
 
 /**
- * "Tram A 18:12 → TER ~18:31", or on foot. A time without real time (a TER,
- * a tram not left its terminus yet) is marked "~", as on the departures.
+ * "Lianes 4 21:45, changer à Gare Saint-Jean : TER ~21:53", or on foot. Each
+ * change names its stop, and the walk when the next line leaves from another
+ * one. A time without real time (a TER, a tram not left its terminus yet) is
+ * marked "~", as on the departures.
  */
 export function formatRoute(journey, language = 'fr') {
-  if (!journey) return LABELS[language].none;
-  if (journey.walkOnly) return LABELS[language].walk(journey.durationMinutes);
-  return journey.legs
-    .map((leg) => `${leg.line} ${leg.realtime ? '' : '~'}${formatClock(leg.start)}`)
-    .join(' → ');
+  const labels = LABELS[language];
+  if (!journey) return labels.none;
+  if (journey.walkOnly) return labels.walk(journey.durationMinutes);
+  let text = '';
+  journey.legs.forEach((leg, i) => {
+    if (i > 0) {
+      const previous = journey.legs[i - 1];
+      text +=
+        previous.to && leg.from && previous.to !== leg.from
+          ? labels.walkTo(previous.to, leg.from)
+          : labels.change(leg.from || previous.to || '?');
+    }
+    text += `${leg.line} ${leg.realtime ? '' : '~'}${formatClock(leg.start)}`;
+  });
+  return text;
 }
 
 /** "18:05 → 18:47 · 18:15 → 18:55". */
