@@ -17,7 +17,7 @@ the notes of the version's GitHub Release.
 
 ### Changed
 
-- A delay reads "11 min (dont 3 min de retard)": the words say that the
+- A delay reads "11 min (dont 3 minutes de retard)": the words say that the
   minutes already count it.
 
 ### Fixed

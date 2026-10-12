@@ -65,7 +65,7 @@ const LABELS = {
     summary: 'prochains passages',
     none: 'Aucun passage à venir',
     now: 'à l’arrêt',
-    late: (minutes) => `dont ${minutes} min de retard`,
+    late: (minutes, short) => `dont ${minutes} ${short ? 'min' : 'minutes'} de retard`,
     last: 'dernier',
   },
   en: {
@@ -76,7 +76,7 @@ const LABELS = {
     summary: 'next departures',
     none: 'No upcoming departure',
     now: 'now',
-    late: (minutes) => `incl. ${minutes} min delay`,
+    late: (minutes, short) => `incl. ${minutes} ${short ? 'min' : 'minutes'} delay`,
     last: 'last',
   },
 };
@@ -103,23 +103,32 @@ export function directionLabel(direction, name, language = 'fr') {
   return name ? `${base} → ${truncate(name, 48)}` : base;
 }
 
+// A widget value shows 40 characters: past that, the delay says "min".
+const WAIT_MAX = 40;
+
 /**
  * "3 min", "~11 min" for a timetable guess, "à l’arrêt", then in brackets the
  * delay and "dernier" for the last departure before a break in service:
- * "12 min (dont 2 min de retard, dernier)". The minutes already count the
- * delay, and the bracket says so in words: a bare "+2" read as another
- * departure, "2 min de retard" as a delay still to add. At most 40 characters
- * (the widget value budget) with both notes.
- * Brackets, as " · " already separates departures.
+ * "12 min (dont 2 minutes de retard)". The minutes already count the delay,
+ * and the bracket says so in words: a bare "+2" read as another departure,
+ * "2 min de retard" as a delay still to add. When the text would pass the 40
+ * characters of a widget value ("dernier" too), the delay says "min" instead
+ * of "minutes". Brackets, as " · " already separates departures.
  */
 export function formatWait(departure, language = 'fr') {
   const scheduled = departure.realtime ? '' : '~';
   const wait =
     departure.minutes === 0 ? LABELS[language].now : `${scheduled}${departure.minutes} min`;
-  const notes = [];
-  if (departure.delayMinutes >= 2) notes.push(LABELS[language].late(departure.delayMinutes));
-  if (departure.last) notes.push(LABELS[language].last);
-  return notes.length ? `${wait} (${notes.join(', ')})` : wait;
+  const text = (short) => {
+    const notes = [];
+    if (departure.delayMinutes >= 2) {
+      notes.push(LABELS[language].late(departure.delayMinutes, short));
+    }
+    if (departure.last) notes.push(LABELS[language].last);
+    return notes.length ? `${wait} (${notes.join(', ')})` : wait;
+  };
+  const long = text(false);
+  return long.length <= WAIT_MAX ? long : text(true);
 }
 
 /**
