@@ -100,7 +100,14 @@ par sens avec le prochain passage, puis les prochains départs des deux sens, du
 plus lointain — en vert s'ils sont suivis en temps réel, en gris (« ~ ») si c'est l'horaire
 théorique, en orange à partir de 5 minutes de retard.
 
-Ajoutez-le depuis l'édition du tableau de bord, puis choisissez la ligne dans ses réglages.
+Ajoutez-le depuis l'édition du tableau de bord, puis choisissez dans ses réglages :
+
+- **Ligne à une station** : l'appareil à afficher ;
+- **Sens** (facultatif) : « Sens 1 » ou « Sens 2 », comme dans les noms des fonctionnalités de
+  l'appareil, pour n'afficher que les passages de ce sens, avec sous le titre l'endroit où il va.
+  Laissé vide, le widget affiche les deux sens.
+
+Pour suivre les deux sens séparément, ajoutez deux widgets sur la même ligne, un par sens.
 
 ## Scènes
 

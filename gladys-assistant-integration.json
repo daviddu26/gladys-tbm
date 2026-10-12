@@ -329,8 +329,8 @@
       "key": "departures",
       "label": { "en": "TBM departures", "fr": "Passages TBM" },
       "description": {
-        "en": "The next departures of a line at a station, in both directions.",
-        "fr": "Les prochains passages d’une ligne à une station, dans les deux sens."
+        "en": "The next departures of a line at a station, in one direction or both.",
+        "fr": "Les prochains passages d’une ligne à une station, dans un sens ou les deux."
       },
       "icon": "clock",
       "settings": [
@@ -340,6 +340,19 @@
           "source": "devices",
           "label": { "en": "Line at a station", "fr": "Ligne à une station" },
           "required": true
+        },
+        {
+          "key": "direction",
+          "type": "select",
+          "label": { "en": "Direction", "fr": "Sens" },
+          "description": {
+            "en": "As in the feature names of the device. Empty: both directions.",
+            "fr": "Comme dans les noms des fonctionnalités de l’appareil. Vide : les deux sens."
+          },
+          "options": [
+            { "value": "0", "label": { "en": "Direction 1", "fr": "Sens 1" } },
+            { "value": "1", "label": { "en": "Direction 2", "fr": "Sens 2" } }
+          ]
         }
       ]
     }

@@ -74,6 +74,11 @@ The **TBM departures** widget shows a line at a station like a stop sign: one ti
 with the next departure, then the next departures of both directions — green when tracked in real
 time, grey ("~") for a timetable time, orange from 5 minutes late.
 
+In its settings, choose the **line at a station** and, optionally, a **direction** ("Direction 1"
+or "Direction 2", as in the feature names of the device) to show only that direction, with where
+it goes under the title. Left empty, the widget shows both. Add two widgets for the same line to
+follow each direction on its own.
+
 ## Scenes
 
 - Trigger **TBM departure approaching**: a vehicle of a followed line gets under the chosen number

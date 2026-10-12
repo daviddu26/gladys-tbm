@@ -53,13 +53,24 @@ function rowColor(departure) {
   return (departure.delayMinutes ?? 0) >= 5 ? WARNING : SUCCESS;
 }
 
+// The ids of the two directions in the TBM data (DirectionRef).
+const DIRECTIONS = ['0', '1'];
+
+/** The direction chosen in the widget settings, or null for both. */
+export function selectedDirection(value) {
+  const direction = String(value ?? '').trim();
+  return DIRECTIONS.includes(direction) ? direction : null;
+}
+
 /**
  * The card of one line at one station.
- * @param {{ stationName: string, lineName: string, lineCode: string, directions: string[] }} info
+ * @param {{ stationName: string, lineName: string, lineCode: string, directions: string[],
+ *   directionNames?: Record<string, string> }} info
  * @param {object[]} departures upcoming, both directions, soonest first
  * @param {string} language
+ * @param {string|null} direction one direction ('0' or '1'), or null for both
  */
-export function departuresContent(info, departures, language = 'fr') {
+export function departuresContent(info, departures, language = 'fr', direction = null) {
   const components = [
     {
       type: 'text',
@@ -68,54 +79,76 @@ export function departuresContent(info, departures, language = 'fr') {
     },
   ];
 
-  for (const direction of info.directions) {
-    const next = departures.find((departure) => departure.direction === direction);
-    const rank = directionRank(direction);
-    components.push(
-      next
-        ? {
-            type: 'value',
-            value: next.minutes,
-            unit: 'min',
-            label: truncate(`${rank} → ${next.destination}`, 24),
-            icon: 'clock',
-            color: next.realtime ? SUCCESS : NEUTRAL,
-          }
-        : {
-            type: 'value',
-            value: '—',
-            label: { en: `Direction ${rank}`, fr: `Sens ${rank}` },
-            icon: 'clock',
-            color: NEUTRAL,
-          },
-    );
+  // One direction chosen: a stop sign on a platform shows one way only, so the
+  // card keeps that direction's tile and departures, and names where it goes.
+  const shown = direction ? [direction] : info.directions;
+  if (direction) {
+    departures = departures.filter((departure) => departure.direction === direction);
   }
+
+  // The widget contract allows two texts per card: the heading and one
+  // caption. Everything else worth a line (where the chosen direction goes,
+  // an empty board, timetable guesses) is gathered into that caption.
+  const notes = { en: [], fr: [] };
+  if (direction) {
+    const rank = directionRank(direction);
+    const name = info.directionNames?.[direction];
+    notes.en.push(name ? `Direction ${rank} → ${name}.` : `Direction ${rank}.`);
+    notes.fr.push(name ? `Sens ${rank} → ${name}.` : `Sens ${rank}.`);
+  }
+
+  const tiles = shown.map((id) => {
+    const next = departures.find((departure) => departure.direction === id);
+    const rank = directionRank(id);
+    return next
+      ? {
+          type: 'value',
+          value: next.minutes,
+          unit: 'min',
+          label: truncate(`${rank} → ${next.destination}`, 24),
+          icon: 'clock',
+          color: next.realtime ? SUCCESS : NEUTRAL,
+        }
+      : {
+          type: 'value',
+          value: '—',
+          label: { en: `Direction ${rank}`, fr: `Sens ${rank}` },
+          icon: 'clock',
+          color: NEUTRAL,
+        };
+  });
 
   const board = departures.slice(0, BOARD_ROWS);
   if (board.length === 0) {
-    components.push({
-      type: 'text',
-      variant: WIDGET_TEXT_VARIANTS.CAPTION,
-      text: { en: 'No departure in the next hour.', fr: 'Aucun passage dans l’heure.' },
-    });
-    return { ttl_seconds: TTL_SECONDS, components };
+    notes.en.push('No departure in the next hour.');
+    notes.fr.push('Aucun passage dans l’heure.');
+  } else if (board.some((departure) => !departure.realtime)) {
+    notes.en.push('~ timetable, not tracked yet.');
+    notes.fr.push('~ horaire théorique, pas encore suivi.');
   }
+  const caption = notes.fr.length
+    ? {
+        type: 'text',
+        variant: WIDGET_TEXT_VARIANTS.CAPTION,
+        text: { en: truncate(notes.en.join(' '), 300), fr: truncate(notes.fr.join(' '), 300) },
+      }
+    : null;
 
-  components.push({
-    type: 'status',
-    items: board.map((departure) => ({
-      label: truncate(`${info.lineCode} → ${departure.destination}`, 40),
-      value: truncate(formatWait(departure, language), 40),
-      color: rowColor(departure),
-    })),
-  });
-  if (board.some((departure) => !departure.realtime)) {
+  // With one direction, its name belongs right under the heading; with both,
+  // the caption only explains the board, so it comes last.
+  if (direction && caption) components.push(caption);
+  components.push(...tiles);
+  if (board.length > 0) {
     components.push({
-      type: 'text',
-      variant: WIDGET_TEXT_VARIANTS.CAPTION,
-      text: { en: '~ timetable, not tracked yet.', fr: '~ horaire théorique, pas encore suivi.' },
+      type: 'status',
+      items: board.map((departure) => ({
+        label: truncate(`${info.lineCode} → ${departure.destination}`, 40),
+        value: truncate(formatWait(departure, language), 40),
+        color: rowColor(departure),
+      })),
     });
   }
+  if (!direction && caption) components.push(caption);
   return { ttl_seconds: TTL_SECONDS, components };
 }
 
@@ -131,7 +164,12 @@ export const WIDGETS = {
       }
       try {
         const departures = await blueprint.read();
-        return departuresContent(blueprint.describe(), departures, language === 'en' ? 'en' : 'fr');
+        return departuresContent(
+          blueprint.describe(),
+          departures,
+          language === 'en' ? 'en' : 'fr',
+          selectedDirection(settings?.direction),
+        );
       } catch (err) {
         if (err instanceof TbmApiError) {
           logger.warn(`Widget ${DEPARTURES_WIDGET}: ${err.message}`);

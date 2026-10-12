@@ -5,7 +5,13 @@ import { createFakeGladys } from '@gladysassistant/integration-sdk/testing';
 import { normalizeConfig } from '../src/config.js';
 import { clearDeparturesCache, upcoming, parseDepartures } from '../src/api/departures.js';
 import { clearSuggestions } from '../src/devices/suggestions.js';
-import { DEPARTURES_WIDGET, departuresContent, truncate, WIDGETS } from '../src/widgets.js';
+import {
+  DEPARTURES_WIDGET,
+  departuresContent,
+  selectedDirection,
+  truncate,
+  WIDGETS,
+} from '../src/widgets.js';
 import { useFixtureDirectory } from './helpers/directory.js';
 import { NOW, stopMonitoringPayload } from './helpers/fixtures.js';
 import { stubFetch } from './helpers/stubFetch.js';
@@ -48,6 +54,36 @@ test('the board: a tile per direction, the departures, the timetable caption', (
   assert.equal(content.ttl_seconds, 30);
 });
 
+test('one direction chosen: its name, its tile, its departures only', () => {
+  const info = {
+    ...INFO,
+    directionNames: { 0: 'Hôpital Pellegrin / Le Haillan Rostand', 1: 'Cenon Gare / La Gardette' },
+  };
+  const content = departuresContent(info, tramA(), 'fr', '1');
+  assert.deepEqual(validateWidgetContent(content), []);
+  const [heading, name, tile, board] = content.components;
+  assert.equal(heading.text, 'Hôtel de Ville · Tram A');
+  // The direction and the timetable note share the one caption a card allows.
+  assert.equal(
+    name.text.fr,
+    'Sens 2 → Cenon Gare / La Gardette. ~ horaire théorique, pas encore suivi.',
+  );
+  assert.deepEqual([tile.value, tile.label], [1, '2 → La Gardette']);
+  assert.equal(content.components.filter((c) => c.type === 'value').length, 1);
+  assert.deepEqual(
+    board.items.map((item) => item.label),
+    ['A → La Gardette', 'A → Cenon Gare'],
+  );
+});
+
+test('the direction setting: "0" or "1", anything else means both', () => {
+  assert.equal(selectedDirection('0'), '0');
+  assert.equal(selectedDirection(1), '1');
+  for (const value of [undefined, null, '', '2', 'Sens 1']) {
+    assert.equal(selectedDirection(value), null);
+  }
+});
+
 test('an empty board says so, and stays valid', () => {
   const content = departuresContent(INFO, []);
   assert.deepEqual(validateWidgetContent(content), []);
@@ -68,6 +104,15 @@ test('the widget reads the device chosen in its settings', async (t) => {
   });
   assert.deepEqual(validateWidgetContent(content), []);
   assert.equal(content.components[0].text, 'Hôtel de Ville · Tram A');
+
+  const oneWay = await WIDGETS[DEPARTURES_WIDGET].get(gladys, {
+    settings: { device, direction: '0' },
+    language: 'fr',
+    config,
+  });
+  assert.deepEqual(validateWidgetContent(oneWay), []);
+  assert.match(oneWay.components[1].text.fr, /^Sens 1/);
+  assert.equal(oneWay.components.filter((c) => c.type === 'value').length, 1);
 });
 
 test('a missing device or an API outage is a card that says so', async (t) => {

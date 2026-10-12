@@ -10,6 +10,11 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- Dashboard widget "TBM departures": a "Direction" setting shows a single
+  direction (its tile, its departures and where it goes); empty keeps both.
+
 ## [0.0.1] - 2026-10-12
 
 ### Added
