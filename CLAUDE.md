@@ -62,7 +62,11 @@ test/helpers/fixtures.js          TBM answers shaped like the real ones (2026-10
 ## What is known of the TBM data
 
 - Stop-monitoring answers nothing for a quay (`BP:3718`), everything for a stop
-  area (`BP:THDVA`): every line, both directions, about 90 minutes ahead.
+  area (`BP:THDVA`): every line, both directions, about 90 minutes ahead by
+  default. `PreviewInterval` is honoured (checked 2026-10-12: PT1H → 1 h,
+  PT6H → 6 h, PT12H reaches the next morning): the integration asks `PT4H`,
+  which is what shows the last departure of the evening (a departure followed
+  by nothing of its line and direction for 2 h, `SERVICE_BREAK_MS`).
 - Tram and bus stop areas are distinct (T… / B…), even with the same name.
 - A visit: `MonitoredVehicleJourney.{LineRef, DirectionRef ("0"/"1"),
 DirectionName[], DestinationName[], FramedVehicleJourneyRef.DatedVehicleJourneyRef,

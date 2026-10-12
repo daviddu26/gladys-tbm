@@ -3,7 +3,13 @@
 // SIRI-Lite method found in the URL, and recording every call.
 // -----------------------------------------------------------------------------
 
-import { linesPayload, stopMonitoringPayload, stopPointsPayload } from './fixtures.js';
+import {
+  hotelDeVilleVisits,
+  laterVisits,
+  linesPayload,
+  stopMonitoringPayload,
+  stopPointsPayload,
+} from './fixtures.js';
 
 /**
  * Replace the global fetch for the duration of a test.
@@ -17,7 +23,7 @@ export function stubFetch(t, overrides = {}) {
   const routes = {
     'stoppoints-discovery': stopPointsPayload,
     'lines-discovery': linesPayload,
-    'stop-monitoring': () => stopMonitoringPayload(),
+    'stop-monitoring': () => stopMonitoringPayload([...hotelDeVilleVisits(), ...laterVisits()]),
     ...overrides,
   };
   const calls = [];

@@ -10,6 +10,25 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- The last departure of a direction before a break in service (usually the
+  last of the evening) is flagged: "(dernier)" in the texts, an orange row and
+  tile in the widget, and "Dernier à 00:24 → …" under its title. Stations are
+  now read four hours ahead to see it coming.
+- Dashboard widget: a "Departures shown" setting, from the next one only to 5.
+
+### Changed
+
+- The integration is named "TBM", and the cover image carries a TBM banner.
+- A delay reads "7 min (5 min de retard)" instead of "7 min (+5)": the minutes
+  already count the delay, the bare "+5" looked like another departure.
+
+### Fixed
+
+- Widget: the caption under the title no longer goes past the 80 characters
+  Gladys shows; the name of a long direction is shortened instead.
+
 ## [0.0.2] - 2026-10-12
 
 ### Added

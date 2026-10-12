@@ -1,4 +1,4 @@
-# TBM Bordeaux
+# TBM
 
 This integration brings the **real-time departures** of the trams, buses and boats of the **TBM**
 network (Bordeaux Métropole) into Gladys, **direction by direction**: for each line followed at a
@@ -27,19 +27,22 @@ address**, in alphabetical order.
 
 One device per **line at a station**. For each direction of the line:
 
-| Feature                                   | Value                                         |
-| ----------------------------------------- | --------------------------------------------- |
-| Direction 1 → … · **next departure**      | minutes before the next departure (999: none) |
-| Direction 1 → … · **destination**         | where that vehicle goes, e.g. "La Gardette"   |
-| Direction 1 → … · **following departure** | minutes before the one after                  |
-| Direction 1 → … · **next departures**     | "La Gardette 3 min · Cenon Gare ~11 min (+2)" |
+| Feature                                   | Value                                                |
+| ----------------------------------------- | ---------------------------------------------------- |
+| Direction 1 → … · **next departure**      | minutes before the next departure (999: none)        |
+| Direction 1 → … · **destination**         | where that vehicle goes, e.g. "La Gardette"          |
+| Direction 1 → … · **following departure** | minutes before the one after                         |
+| Direction 1 → … · **next departures**     | "La Gardette 3 min · Cenon Gare 11 min (2 min late)" |
 
 The name of each feature says where the direction goes. The **destination** is the vehicle's own:
 on a branching line (tram A after Buttinière), direction 2 leaves for La Gardette one time and for
 Cenon Gare the next.
 
-In the texts: **~11 min** is a timetable time (the vehicle is not tracked yet), **(+2)** a 2-minute
-delay, **now** less than a minute. Values keep no history.
+In the texts: **~11 min** is a timetable time (the vehicle is not tracked yet); **(2 min late)** a
+delay, already counted in the minutes shown ("11 min (2 min late)": it leaves in 11 minutes instead
+of 9); **(last)** the last departure of the direction before a break of more than two hours, that
+is usually the last of the evening, flagged up to two hours ahead; **now** less than a minute.
+Values keep no history.
 
 Set **Language of the values** to English for English feature names and texts.
 
@@ -72,12 +75,14 @@ them by number in **Stations** if needed.
 
 The **TBM departures** widget shows a line at a station like a stop sign: one tile per direction
 with the next departure, then the next departures of both directions — green when tracked in real
-time, grey ("~") for a timetable time, orange from 5 minutes late.
+time, grey ("~") for a timetable time, orange from 5 minutes late or for the **last departure** of
+the evening, also announced under the title ("Last at 00:24 → Le Haillan Rostand").
 
 In its settings, choose the **line at a station** and, optionally, a **direction** ("Direction 1"
 or "Direction 2", as in the feature names of the device) to show only that direction, with where
 it goes under the title. Left empty, the widget shows both. Add two widgets for the same line to
-follow each direction on its own.
+follow each direction on its own. **Departures shown** lists 1 to 5 departures; "Next only" keeps
+the tile of each direction alone. Left empty: 5.
 
 ## Scenes
 

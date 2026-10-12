@@ -1,4 +1,4 @@
-# TBM Bordeaux
+# TBM
 
 Cette intégration affiche dans Gladys les **prochains passages en temps réel** des trams, bus et
 bateaux du réseau **TBM** (Bordeaux Métropole), **sens par sens** : pour chaque ligne suivie à une
@@ -29,12 +29,12 @@ qui a une adresse**, dans l'ordre alphabétique.
 
 Un appareil par **ligne à une station**. Pour chaque sens de la ligne :
 
-| Fonctionnalité                      | Valeur                                                  |
-| ----------------------------------- | ------------------------------------------------------- |
-| Sens 1 → … · **prochain passage**   | minutes avant le prochain passage (999 : aucun passage) |
-| Sens 1 → … · **destination**        | où va ce véhicule, par exemple « La Gardette »          |
-| Sens 1 → … · **passage suivant**    | minutes avant le passage d'après                        |
-| Sens 1 → … · **prochains passages** | « La Gardette 3 min · Cenon Gare ~11 min (+2) »         |
+| Fonctionnalité                      | Valeur                                                      |
+| ----------------------------------- | ----------------------------------------------------------- |
+| Sens 1 → … · **prochain passage**   | minutes avant le prochain passage (999 : aucun passage)     |
+| Sens 1 → … · **destination**        | où va ce véhicule, par exemple « La Gardette »              |
+| Sens 1 → … · **passage suivant**    | minutes avant le passage d'après                            |
+| Sens 1 → … · **prochains passages** | « La Gardette 3 min · Cenon Gare 11 min (2 min de retard) » |
 
 Le nom de chaque fonctionnalité dit où va le sens : « Sens 1 → Hôpital Pellegrin / Le Haillan
 Rostand ». La **destination** est celle du véhicule lui-même : sur une ligne qui se divise (le tram
@@ -44,7 +44,11 @@ Dans les textes :
 
 - **~11 min** : horaire théorique, le véhicule n'est pas encore suivi en temps réel (souvent un
   tram qui n'a pas quitté son terminus) ;
-- **(+2)** : 2 minutes de retard sur l'horaire prévu ;
+- **(2 min de retard)** : le véhicule a 2 minutes de retard sur l'horaire prévu. Les minutes
+  affichées tiennent **déjà compte** du retard : « 11 min (2 min de retard) » veut dire qu'il passe
+  dans 11 minutes, au lieu de 9 prévues ;
+- **(dernier)** : le dernier passage de ce sens avant une coupure de plus de deux heures,
+  c'est-à-dire en général le dernier de la soirée. Il est signalé jusqu'à deux heures à l'avance ;
 - **à l'arrêt** : moins d'une minute.
 
 Les valeurs ne sont pas historisées : un compte à rebours n'a pas d'intérêt une fois passé.
@@ -98,14 +102,17 @@ proposés automatiquement : ajoutez-les par leur numéro dans **Stations** si be
 Le widget **Passages TBM** affiche une ligne à une station comme un panneau d'arrêt : une tuile
 par sens avec le prochain passage, puis les prochains départs des deux sens, du plus proche au
 plus lointain — en vert s'ils sont suivis en temps réel, en gris (« ~ ») si c'est l'horaire
-théorique, en orange à partir de 5 minutes de retard.
+théorique, en orange à partir de 5 minutes de retard ou pour le **dernier passage** de la soirée.
+Le dernier passage est aussi annoncé sous le titre : « Dernier à 00:24 → Le Haillan Rostand ».
 
 Ajoutez-le depuis l'édition du tableau de bord, puis choisissez dans ses réglages :
 
 - **Ligne à une station** : l'appareil à afficher ;
 - **Sens** (facultatif) : « Sens 1 » ou « Sens 2 », comme dans les noms des fonctionnalités de
   l'appareil, pour n'afficher que les passages de ce sens, avec sous le titre l'endroit où il va.
-  Laissé vide, le widget affiche les deux sens.
+  Laissé vide, le widget affiche les deux sens ;
+- **Passages affichés** (facultatif) : de 1 à 5 passages dans la liste. Avec « Le prochain
+  seulement », le widget n'affiche que la tuile du prochain passage de chaque sens. Laissé vide : 5.
 
 Pour suivre les deux sens séparément, ajoutez deux widgets sur la même ligne, un par sens.
 
@@ -144,7 +151,7 @@ et la phrase toute faite, à envoyer en notification ou à faire annoncer.
 | Rien dans l'onglet Découverte          | Augmentez le rayon de recherche, ou ajoutez une station à la main.                |
 | « Introuvable dans Stations : … »      | Vérifiez le code avec **Chercher une station**.                                   |
 | « Le service TBM ne répond pas »       | Panne côté TBM : l'intégration réessaie seule et garde l'annuaire connu.          |
-| Toujours 999                           | Aucun passage dans l'heure (nuit, fin de service, sens non desservi ici).         |
+| Toujours 999                           | Aucun passage dans les 4 heures (nuit, fin de service, sens non desservi ici).    |
 
 ## Données
 

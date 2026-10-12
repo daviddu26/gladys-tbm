@@ -1,7 +1,7 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "TBM Bordeaux",
+  "name": "TBM",
   "description": {
     "en": "Real-time departures of the TBM trams, buses and boats (Bordeaux), by direction.",
     "fr": "Prochains passages en temps réel des trams, bus et bateaux TBM (Bordeaux), par sens."
@@ -352,6 +352,22 @@
           "options": [
             { "value": "0", "label": { "en": "Direction 1", "fr": "Sens 1" } },
             { "value": "1", "label": { "en": "Direction 2", "fr": "Sens 2" } }
+          ]
+        },
+        {
+          "key": "count",
+          "type": "select",
+          "label": { "en": "Departures shown", "fr": "Passages affichés" },
+          "description": {
+            "en": "1: only the next departure of each direction. Empty: 5.",
+            "fr": "1 : seulement le prochain passage de chaque sens. Vide : 5."
+          },
+          "options": [
+            { "value": "1", "label": { "en": "Next only", "fr": "Le prochain seulement" } },
+            { "value": "2", "label": { "en": "2 departures", "fr": "2 passages" } },
+            { "value": "3", "label": { "en": "3 departures", "fr": "3 passages" } },
+            { "value": "4", "label": { "en": "4 departures", "fr": "4 passages" } },
+            { "value": "5", "label": { "en": "5 departures", "fr": "5 passages" } }
           ]
         }
       ]

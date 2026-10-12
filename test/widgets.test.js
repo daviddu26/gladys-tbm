@@ -8,6 +8,8 @@ import { clearSuggestions } from '../src/devices/suggestions.js';
 import {
   DEPARTURES_WIDGET,
   departuresContent,
+  captionText,
+  selectedCount,
   selectedDirection,
   truncate,
   WIDGETS,
@@ -45,7 +47,7 @@ test('the board: a tile per direction, the departures, the timetable caption', (
     board.items.map((item) => [item.label, item.value, item.color]),
     [
       ['A → La Gardette', '1 min', 'success'],
-      ['A → Le Haillan Rostand', '2 min (+7)', 'warning'],
+      ['A → Le Haillan Rostand', '2 min (7 min de retard)', 'warning'],
       ['A → Cenon Gare', '~3 min', 'neutral'],
       ['A → Hôpital Pellegrin', '9 min', 'success'],
     ],
@@ -59,21 +61,67 @@ test('one direction chosen: its name, its tile, its departures only', () => {
     ...INFO,
     directionNames: { 0: 'Hôpital Pellegrin / Le Haillan Rostand', 1: 'Cenon Gare / La Gardette' },
   };
-  const content = departuresContent(info, tramA(), 'fr', '1');
+  const content = departuresContent(info, tramA(), 'fr', { direction: '1' });
   assert.deepEqual(validateWidgetContent(content), []);
   const [heading, name, tile, board] = content.components;
   assert.equal(heading.text, 'Hôtel de Ville · Tram A');
   // The direction and the timetable note share the one caption a card allows.
-  assert.equal(
-    name.text.fr,
-    'Sens 2 → Cenon Gare / La Gardette. ~ horaire théorique, pas encore suivi.',
-  );
+  assert.equal(name.text.fr, 'Sens 2 → Cenon Gare / La Gardette. ~ horaire théorique.');
   assert.deepEqual([tile.value, tile.label], [1, '2 → La Gardette']);
   assert.equal(content.components.filter((c) => c.type === 'value').length, 1);
   assert.deepEqual(
     board.items.map((item) => item.label),
     ['A → La Gardette', 'A → Cenon Gare'],
   );
+});
+
+test('the number of departures: 1 keeps the tiles only, 3 lists three', () => {
+  const one = departuresContent(INFO, tramA(), 'fr', { count: 1 });
+  assert.deepEqual(validateWidgetContent(one), []);
+  assert.equal(one.components.filter((c) => c.type === 'status').length, 0);
+  assert.equal(one.components.filter((c) => c.type === 'value').length, 2);
+  const three = departuresContent(INFO, tramA(), 'fr', { count: 3 });
+  assert.equal(three.components.find((c) => c.type === 'status').items.length, 3);
+});
+
+test('the count setting: 1 to 5, empty or wrong means 5', () => {
+  assert.equal(selectedCount('1'), 1);
+  assert.equal(selectedCount(3), 3);
+  assert.equal(selectedCount('9'), 5);
+  assert.equal(selectedCount('0'), 1);
+  for (const value of [undefined, null, '', 'tous']) assert.equal(selectedCount(value), 5);
+});
+
+test('the last departure of the evening: an orange tile and row, a caption', () => {
+  const departures = tramA().map((departure) =>
+    departure.destination === 'Hôpital Pellegrin' ? { ...departure, last: true } : departure,
+  );
+  const info = { ...INFO, directionNames: { 0: 'Hôpital Pellegrin / Le Haillan Rostand' } };
+  const content = departuresContent(info, departures, 'fr', { direction: '0' });
+  assert.deepEqual(validateWidgetContent(content), []);
+  const [, caption, tile, board] = content.components;
+  // Notes keep their display order (direction, then last); the room goes by
+  // importance, so the name of the direction is shortened to fit.
+  assert.match(caption.text.fr, /^Sens 1 → .*\. Dernier à \d\d:\d\d → Hôpital Pellegrin\.$/);
+  assert.equal(tile.color, 'success');
+  const lastRow = board.items.find((item) => item.label === 'A → Hôpital Pellegrin');
+  assert.deepEqual([lastRow.value, lastRow.color], ['9 min (dernier)', 'warning']);
+});
+
+test('the caption keeps the most important notes within 80 characters', () => {
+  const notes = [
+    { rank: 2, en: 'x'.repeat(50), fr: 'Sens 1 → ' + 'y'.repeat(50) },
+    { rank: 1, en: 'Last at 00:24 → Le Haillan.', fr: 'Dernier à 00:24 → Le Haillan.' },
+    { rank: 4, en: '~ timetable, not tracked yet.', fr: '~ horaire théorique.' },
+  ];
+  const text = captionText(notes);
+  assert.ok(text.fr.length <= 80 && text.en.length <= 80);
+  // The last departure first; the long note no longer fits and is dropped,
+  // the short one after it still does.
+  assert.match(text.fr, /^Dernier à 00:24/);
+  assert.doesNotMatch(text.fr, /yyyy/);
+  assert.match(text.fr, /horaire théorique\.$/);
+  assert.equal(captionText([]), null);
 });
 
 test('the direction setting: "0" or "1", anything else means both', () => {

@@ -65,6 +65,8 @@ const LABELS = {
     summary: 'prochains passages',
     none: 'Aucun passage à venir',
     now: 'à l’arrêt',
+    late: (minutes) => `${minutes} min de retard`,
+    last: 'dernier',
   },
   en: {
     direction: (rank) => `Direction ${rank}`,
@@ -74,6 +76,8 @@ const LABELS = {
     summary: 'next departures',
     none: 'No upcoming departure',
     now: 'now',
+    late: (minutes) => `${minutes} min late`,
+    last: 'last',
   },
 };
 
@@ -99,13 +103,21 @@ export function directionLabel(direction, name, language = 'fr') {
   return name ? `${base} → ${truncate(name, 48)}` : base;
 }
 
-/** "3 min", "~11 min" for a timetable guess, "+2" when late, "à l’arrêt". */
+/**
+ * "3 min", "~11 min" for a timetable guess, "à l’arrêt", then in brackets the
+ * delay and "dernier" for the last departure before a break in service:
+ * "12 min (2 min de retard, dernier)". The minutes already count the delay:
+ * the bracket says why, it is not another departure (a bare "+2" read as one).
+ * Brackets, as " · " already separates departures.
+ */
 export function formatWait(departure, language = 'fr') {
   const scheduled = departure.realtime ? '' : '~';
   const wait =
     departure.minutes === 0 ? LABELS[language].now : `${scheduled}${departure.minutes} min`;
-  const late = departure.delayMinutes >= 2 ? ` (+${departure.delayMinutes})` : '';
-  return `${wait}${late}`;
+  const notes = [];
+  if (departure.delayMinutes >= 2) notes.push(LABELS[language].late(departure.delayMinutes));
+  if (departure.last) notes.push(LABELS[language].last);
+  return notes.length ? `${wait} (${notes.join(', ')})` : wait;
 }
 
 /**

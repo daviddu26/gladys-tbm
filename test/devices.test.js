@@ -107,9 +107,20 @@ test('the texts of a direction', () => {
   assert.equal(directionLabel('1', 'Cenon Gare', 'en'), 'Direction 2 → Cenon Gare');
   assert.equal(formatWait({ minutes: 3, realtime: true, delayMinutes: 0 }), '3 min');
   assert.equal(formatWait({ minutes: 11, realtime: false, delayMinutes: null }), '~11 min');
-  assert.equal(formatWait({ minutes: 2, realtime: true, delayMinutes: 7 }), '2 min (+7)');
+  assert.equal(
+    formatWait({ minutes: 2, realtime: true, delayMinutes: 7 }),
+    '2 min (7 min de retard)',
+  );
   assert.equal(formatWait({ minutes: 0, realtime: true, delayMinutes: 1 }), 'à l’arrêt');
   assert.equal(formatWait({ minutes: 0, realtime: true, delayMinutes: 0 }, 'en'), 'now');
+  assert.equal(
+    formatWait({ minutes: 12, realtime: true, delayMinutes: 0, last: true }),
+    '12 min (dernier)',
+  );
+  assert.equal(
+    formatWait({ minutes: 12, realtime: true, delayMinutes: 2, last: true }, 'en'),
+    '12 min (2 min late, last)',
+  );
   assert.equal(formatSummary([], 3), 'Aucun passage à venir');
   assert.equal(
     formatSummary(
@@ -230,11 +241,15 @@ test('a poll publishes both directions, then only what moved', async (t) => {
   assert.equal(state('d0_next'), 2);
   assert.equal(state('d0_destination'), 'Le Haillan Rostand');
   assert.equal(state('d0_following'), 9);
-  assert.equal(state('d0_summary'), 'Le Haillan Rostand 2 min (+7) · Hôpital Pellegrin 9 min');
+  // Read four hours ahead: the third departure is the timetable one of later.
+  assert.equal(
+    state('d0_summary'),
+    'Le Haillan Rostand 2 min (7 min de retard) · Hôpital Pellegrin 9 min · Le Haillan Rostand ~80 min',
+  );
   assert.equal(state('d1_next'), 1);
   assert.equal(state('d1_destination'), 'La Gardette');
   assert.equal(state('d1_following'), 3);
-  assert.equal(state('d1_summary'), 'La Gardette 1 min · Cenon Gare ~3 min');
+  assert.equal(state('d1_summary'), 'La Gardette 1 min · Cenon Gare ~3 min · La Gardette ~80 min');
   const published = gladys.fake.states.length;
   assert.equal(published, 8);
 

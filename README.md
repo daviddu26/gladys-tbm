@@ -1,4 +1,4 @@
-# Gladys TBM Bordeaux
+# Gladys TBM
 
 External integration for [Gladys Assistant](https://gladysassistant.com) that brings the TBM
 network of Bordeaux Métropole (trams, buses, boats) into your smart home:

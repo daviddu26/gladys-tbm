@@ -214,6 +214,39 @@ export function hotelDeVilleVisits() {
   ];
 }
 
+/**
+ * Later departures of every line and direction of Hôtel de Ville, as a real
+ * answer read four hours ahead (PreviewInterval) has them: without them, the
+ * last visit above would look like the last of the day. Timetable only.
+ */
+export function laterVisits() {
+  return [80, 160].flatMap((minutes) => [
+    visit({
+      ...A0,
+      quay: '3718',
+      destination: 'Le Haillan Rostand',
+      journey: `A-0${minutes}`,
+      aimed: minutes * 60,
+    }),
+    visit({
+      ...A1,
+      quay: '3719',
+      destination: 'La Gardette',
+      journey: `A-1${minutes}`,
+      aimed: minutes * 60,
+    }),
+    visit({
+      line: '164',
+      direction: '0',
+      directionName: 'Mérignac Aéroport',
+      quay: '3718',
+      destination: 'Mérignac Aéroport',
+      journey: `F-${minutes}`,
+      aimed: minutes * 60,
+    }),
+  ]);
+}
+
 /** A stop-monitoring answer. */
 export function stopMonitoringPayload(visits = hotelDeVilleVisits()) {
   return {
