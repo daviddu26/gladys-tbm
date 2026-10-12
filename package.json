@@ -1,8 +1,8 @@
 {
-  "name": "gladys-integration-template-js",
-  "version": "1.0.0",
+  "name": "gladys-tbm",
+  "version": "0.0.0",
   "private": true,
-  "description": "Official starter template to build an external integration for Gladys Assistant with the JavaScript SDK.",
+  "description": "Gladys Assistant external integration for TBM (Bordeaux): real-time departures of the trams, buses and boats, by direction.",
   "type": "module",
   "main": "index.js",
   "scripts": {

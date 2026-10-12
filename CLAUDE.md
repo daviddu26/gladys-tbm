@@ -28,21 +28,54 @@ The CI (`.github/workflows/ci.yml`) runs `format:check`, `lint` and `test` on
 Node 22 and 24, and builds the Docker image: run the three commands before
 pushing.
 
+## What this integration does
+
+Real-time departures of the TBM network (Bordeaux Métropole: trams, buses,
+boats), read from the TBM SIRI-Lite API with its public open-data key. One
+read-only device per **line at a station**, with four features per direction
+(next departure, destination, following departure, summary). The stations near
+the house are proposed in the Discover tab (`location: true`, `getHouses()`).
+Journey planning (Transitous) is planned for a later version, not here yet.
+
 ## Architecture
 
 ```
 index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
-src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/api/http.js                   fetch with timeout and User-Agent, TbmApiError
+src/api/siri.js                   SIRI-Lite URLs, unwrapping of { value } / [{ value, lang }]
+src/api/directory.js              stations (stop areas) and lines, cached a day in /data
+src/api/departures.js             stop-monitoring of a station, shared between its devices
+src/devices/index.js              registry: configured + suggested + created devices, poller, actions
+src/devices/stationLine.js        the device type: a line at a station, both directions
+src/devices/suggestions.js        the stations near the house
+src/triggers.js                   scene trigger "departure_approaching"
+src/scenes.js                     scene action "get_next_departures"
+src/widgets.js                    dashboard widget "departures"
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
 docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
 test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+test/helpers/fixtures.js          TBM answers shaped like the real ones (2026-10)
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
+
+## What is known of the TBM data
+
+- Stop-monitoring answers nothing for a quay (`BP:3718`), everything for a stop
+  area (`BP:THDVA`): every line, both directions, about 90 minutes ahead.
+- Tram and bus stop areas are distinct (T… / B…), even with the same name.
+- A visit: `MonitoredVehicleJourney.{LineRef, DirectionRef ("0"/"1"),
+DirectionName[], DestinationName[], FramedVehicleJourneyRef.DatedVehicleJourneyRef,
+MonitoredCall.{AimedDepartureTime, ExpectedDepartureTime, ...}}`. No expected
+  time = not tracked yet (timetable). No departure time = ends its trip here.
+  No cancellation, vehicle-at-stop nor PublishedLineName field.
+- lines-discovery has no colour; `LineCode` is the public code ("A", "5"),
+  `LineName` the full name ("Tram A", "Lianes 5", "TBNight N1"). Line ids keep
+  their leading zeros (`01` is Lianes 1).
+- Device params `station`, `line`, `directions` rebuild a created device: never
+  rename them. The platform id is `<station>-<line>`.
+- Never commit a personal stop: use network landmarks (Hôtel de Ville THDVA,
+  Palais de Justice TPJUST, Quinconces BQUIOR) in examples and tests.
 
 ## Rules
 

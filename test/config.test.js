@@ -1,33 +1,58 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeConfig, DEFAULT_CONFIG } from '../src/config.js';
+import {
+  DEFAULT_CONFIG,
+  normalizeConfig,
+  parseStationEntry,
+  parseStations,
+} from '../src/config.js';
 
-test('normalizeConfig returns the defaults when called with no argument', () => {
-  assert.deepEqual(normalizeConfig(), DEFAULT_CONFIG);
+test('an empty configuration gets the defaults', () => {
+  const config = normalizeConfig();
+  for (const [key, value] of Object.entries(DEFAULT_CONFIG)) {
+    assert.deepEqual(config[key], value, key);
+  }
+  assert.deepEqual(config.watched, { entries: [], invalid: [] });
 });
 
-test('normalizeConfig keeps user values over the defaults', () => {
-  const config = normalizeConfig({ latitude: 45.5, longitude: -73.6, unit: 'fahrenheit' });
-  assert.equal(config.latitude, 45.5);
-  assert.equal(config.longitude, -73.6);
-  assert.equal(config.unit, 'fahrenheit');
+test('numbers sent as text, empty or out of bounds are fixed', () => {
+  const config = normalizeConfig({
+    nearby_stations: '5',
+    nearby_radius: '',
+    poll_frequency: 10,
+    max_departures: 99,
+    include_school_lines: true,
+    language: 'de',
+  });
+  assert.equal(config.nearby_stations, 5);
+  assert.equal(config.nearby_radius, 600);
+  assert.equal(config.poll_frequency, 60);
+  assert.equal(config.max_departures, 5);
+  assert.equal(config.include_school_lines, true);
+  assert.equal(config.language, 'fr');
+  assert.equal(normalizeConfig({ language: 'en' }).language, 'en');
+  assert.equal(normalizeConfig({ include_school_lines: 'yes' }).include_school_lines, false);
 });
 
-test('normalizeConfig coerces numeric strings coming from a form', () => {
-  const config = normalizeConfig({ latitude: '48.8', longitude: '2.3', poll_frequency: '600' });
-  assert.equal(config.latitude, 48.8);
-  assert.equal(config.longitude, 2.3);
-  assert.equal(config.poll_frequency, 600);
-  assert.equal(typeof config.poll_frequency, 'number');
+test('a station entry: a code, and the lines after @', () => {
+  assert.deepEqual(parseStationEntry('THDVA'), { station: 'THDVA', lines: [] });
+  assert.deepEqual(parseStationEntry(' thdva@a '), { station: 'THDVA', lines: ['a'] });
+  assert.deepEqual(parseStationEntry('BQUIOR@2|5+N6'), {
+    station: 'BQUIOR',
+    lines: ['2', '5', 'N6'],
+  });
+  assert.equal(parseStationEntry('@A'), null);
+  assert.equal(parseStationEntry('Hôtel de Ville'), null);
 });
 
-test('normalizeConfig falls back to the default for a missing numeric field', () => {
-  const config = normalizeConfig({ unit: 'celsius' });
-  assert.equal(config.poll_frequency, DEFAULT_CONFIG.poll_frequency);
-});
-
-test('GLADYS_PREFER_LOCAL defaults to true and only an explicit false disables it', () => {
-  assert.equal(normalizeConfig().GLADYS_PREFER_LOCAL, true);
-  assert.equal(normalizeConfig({ GLADYS_PREFER_LOCAL: true }).GLADYS_PREFER_LOCAL, true);
-  assert.equal(normalizeConfig({ GLADYS_PREFER_LOCAL: false }).GLADYS_PREFER_LOCAL, false);
+test('the stations field is split on commas, semicolons and lines', () => {
+  const { entries, invalid } = parseStations('THDVA@A, BQUIOR;\nTPJUST , ,Place de la Bourse');
+  assert.deepEqual(
+    entries.map((entry) => entry.station),
+    ['THDVA', 'BQUIOR', 'TPJUST'],
+  );
+  assert.deepEqual(invalid, ['Place de la Bourse']);
+  assert.deepEqual(normalizeConfig({ stations: 'THDVA' }).watched.entries, [
+    { station: 'THDVA', lines: [] },
+  ]);
 });

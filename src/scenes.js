@@ -1,41 +1,62 @@
 // -----------------------------------------------------------------------------
-// Scene actions (SDK v0.14+, Gladys 5.1+).
+// Scene action "read the next departures" (manifest `scene_actions`).
 //
-// A scene action is an OPERATION a scene author places in a scene, with
-// parameters and a result: "identify this device", "take a snapshot", "clean
-// these rooms". Each one is declared in the manifest `scene_actions` field
-// (key, label, `fields` in the config_schema grammar, scalar `outputs`) and
-// handled here, keyed by that same `key`; index.js registers every entry with
-// `gladys.onSceneAction(key, ...)`.
+// A scene reaches the action, the integration reads the line at its station
+// (or reuses a read a few seconds old) and returns the next departure as
+// outputs the following actions use: "{{tbm.minutes}}", a ready-made
+// sentence for a notification or a voice announcement.
 //
-// Scene TRIGGERS are the other direction ("this happened"): they are fired by
-// the device that observes the event, see src/devices/motionSensor.js.
-//
-// The rules that matter:
-//   - `fields` arrive RESOLVED: scene variables substituted, defaults applied,
-//     validated by the core; a `"source": "devices"` field is the chosen
-//     device external_id;
-//   - resolve an object of the declared `outputs` (scalars only), readable by
-//     the following actions of the scene, or `undefined` for none. Keys not
-//     declared in the manifest are dropped by the core;
-//   - throwing fails THIS action only: the scene logs it and continues. A
-//     scene action is never a condition: return an output and let the scene
-//     author gate on it;
-//   - never fire a scene event as a consequence of a received action: a scene
-//     bound to that event would loop through the integration.
+// The rules of the core: fields arrive resolved, outputs are scalars, throwing
+// fails this action only (the scene goes on), and an action never fires a
+// scene event (a scene bound to it would loop).
 // -----------------------------------------------------------------------------
 
 import { createLogger } from '@gladysassistant/integration-sdk';
-import { signalDevice } from './devices/index.js';
+import { formatClock } from './api/departures.js';
+import { findSelectedBlueprint } from './devices/index.js';
+import { directionRank } from './devices/stationLine.js';
+import { departureSentence } from './triggers.js';
 
 const logger = createLogger({ name: 'scenes' });
 
 export const SCENE_ACTIONS = {
-  // The ack is awaited under the action's `timeout_seconds` (15 s in the
-  // manifest), counted from the moment the scene reaches the action.
-  async identify_device(gladys, { fields, config }) {
-    logger.info(`Scene action identify_device <- ${fields.device}`);
-    const signalled = await signalDevice(gladys, fields.device, config);
-    return { signalled };
+  async get_next_departures(gladys, { fields, config }) {
+    const blueprint = findSelectedBlueprint(gladys, fields.device, config);
+    const direction = fields.direction === '0' || fields.direction === '1' ? fields.direction : '';
+    const departures = (await blueprint.read()).filter(
+      (departure) => !direction || departure.direction === direction,
+    );
+    const [next, following] = departures;
+    const info = blueprint.describe();
+    logger.info(`Scene action get_next_departures <- ${blueprint.key}`);
+    if (!next) {
+      return {
+        found: false,
+        minutes: -1,
+        following_minutes: -1,
+        line: info.lineCode,
+        destination: '',
+        direction_rank: direction ? directionRank(direction) : 0,
+        time: '',
+        delay: 0,
+        realtime: false,
+        summary:
+          config.language === 'en'
+            ? `${info.stationName}: no ${info.lineName} departure in the next hour.`
+            : `${info.stationName} : aucun passage du ${info.lineName} dans l’heure.`,
+      };
+    }
+    return {
+      found: true,
+      minutes: next.minutes,
+      following_minutes: following ? following.minutes : -1,
+      line: info.lineCode,
+      destination: next.destination,
+      direction_rank: directionRank(next.direction),
+      time: formatClock(next.time),
+      delay: next.delayMinutes ?? 0,
+      realtime: next.realtime,
+      summary: departureSentence(info, next, config.language),
+    };
   },
 };

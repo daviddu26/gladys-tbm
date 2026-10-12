@@ -1,166 +1,151 @@
 // -----------------------------------------------------------------------------
-// Dashboard widgets (SDK v0.14+, Gladys 5.1+).
+// Dashboard widget "departures board" (manifest `widgets`).
 //
-// A widget puts the integration's own data on the Gladys dashboard without a
-// dedicated core widget. The manifest `widgets` field declares its identity
-// (key, label, icon, optional per-instance `settings`); at runtime the
-// integration returns a DECLARATIVE content — `text`, `value`, `gauge`,
-// `status`, `chart`, `card-list`, `image`, `button` — that the core renders
-// with its own theme, dark mode and translations. No HTML, no CSS.
+// The devices already put every value on the dashboard, one feature per tile,
+// and that is exactly what a departure board is bad at. The widget is a card
+// the integration composes itself, for one line at one station:
+//   - one tile per direction: the minutes before the next departure, and where
+//     it goes;
+//   - the next departures of both directions, soonest first, green when the
+//     vehicle is tracked in real time, grey ("~") for a timetable guess,
+//     orange when it runs five minutes late or more.
 //
-// Each entry of WIDGETS is keyed by the widget `key` and exposes:
-//   - get(gladys, { settings, language, units, config }): the content,
-//     registered by index.js with `gladys.onWidgetGet(key, ...)`;
-//   - action(gladys, { actionKey, params, settings, config }) (optional): a
-//     tapped `button` carrying an `action`, registered with
-//     `gladys.onWidgetAction`.
-//
-// Check your contents in the tests with `validateWidgetContent` (exported by
-// the SDK, see test/widgets.test.js), or run with DEBUG=gladys-integration-sdk
-// to have the SDK log every violation of the vocabulary and the budget.
+// Nothing here throws at the dashboard: a device removed, or the API down,
+// renders as a card saying so — an empty or failed widget tells nothing.
 // -----------------------------------------------------------------------------
 
 import {
   createLogger,
-  DEVICE_FEATURE_CATEGORIES,
-  DEVICE_TRANSPORTS,
   WIDGET_COLORS,
+  WIDGET_TEXT_VARIANTS,
 } from '@gladysassistant/integration-sdk';
-import { identifyDevice } from './devices/index.js';
-import { weatherStation } from './devices/weatherStation.js';
-import { plug } from './devices/plug.js';
-import { light } from './devices/light.js';
+import { DeviceSelectionError, findSelectedBlueprint } from './devices/index.js';
+import { directionRank, formatWait } from './devices/stationLine.js';
+import { TbmApiError } from './api/http.js';
 
 const logger = createLogger({ name: 'widgets' });
 
-// Widget key, as declared in the manifest `widgets` field.
-export const DEMO_STATUS_WIDGET = 'demo_status';
+/** Widget key, as declared in the manifest. Forever. */
+export const DEPARTURES_WIDGET = 'departures';
 
-// Keys of the `button` actions the demo_status content declares.
-const DEMO_STATUS_ACTIONS = { IDENTIFY_LIGHT: 'identify_light' };
+// Countdowns move every minute; the core re-pulls the card at this pace.
+const TTL_SECONDS = 30;
+// The core caps a status list at ten rows; a board is read at a glance.
+const BOARD_ROWS = 8;
 
-// How the plug transport reads in the status list.
-const TRANSPORT_STATUS = {
-  [DEVICE_TRANSPORTS.LOCAL]: { value: { en: 'Local', fr: 'Locale' }, color: WIDGET_COLORS.SUCCESS },
-  [DEVICE_TRANSPORTS.CLOUD]: { value: { en: 'Cloud', fr: 'Cloud' }, color: WIDGET_COLORS.INFO },
-  [DEVICE_TRANSPORTS.UNREACHABLE]: {
-    value: { en: 'Unreachable', fr: 'Injoignable' },
-    color: WIDGET_COLORS.DANGER,
-  },
-};
+const { NEUTRAL, SUCCESS, WARNING } = WIDGET_COLORS;
 
-// A live tile references a feature by its external_id: read it from the
-// discovery payload itself, so the widget and the device never disagree.
-function featureExternalId(gladys, config, blueprint, category) {
-  const device = blueprint.buildDevice(gladys, config);
-  return device.features.find((feature) => feature.category === category).external_id;
+/** Cut a text to the budget of its component. */
+export function truncate(value, max) {
+  const text = String(value ?? '');
+  return text.length <= max ? text : `${text.slice(0, max - 1).trimEnd()}…`;
 }
 
-function plugConnectionStatus(gladys, config) {
-  const { transport, degraded } = plug.transport(gladys, config);
-  const { value, color } = TRANSPORT_STATUS[transport];
-  if (degraded) {
-    return {
-      value: { en: `${value.en} (degraded mode)`, fr: `${value.fr} (mode dégradé)` },
-      color: WIDGET_COLORS.WARNING,
-    };
+function messageContent(message, ttl = 60) {
+  return {
+    ttl_seconds: ttl,
+    components: [{ type: 'text', variant: WIDGET_TEXT_VARIANTS.BODY, text: message }],
+  };
+}
+
+function rowColor(departure) {
+  if (!departure.realtime) return NEUTRAL;
+  return (departure.delayMinutes ?? 0) >= 5 ? WARNING : SUCCESS;
+}
+
+/**
+ * The card of one line at one station.
+ * @param {{ stationName: string, lineName: string, lineCode: string, directions: string[] }} info
+ * @param {object[]} departures upcoming, both directions, soonest first
+ * @param {string} language
+ */
+export function departuresContent(info, departures, language = 'fr') {
+  const components = [
+    {
+      type: 'text',
+      variant: WIDGET_TEXT_VARIANTS.HEADING,
+      text: truncate(`${info.stationName} · ${info.lineName}`, 40),
+    },
+  ];
+
+  for (const direction of info.directions) {
+    const next = departures.find((departure) => departure.direction === direction);
+    const rank = directionRank(direction);
+    components.push(
+      next
+        ? {
+            type: 'value',
+            value: next.minutes,
+            unit: 'min',
+            label: truncate(`${rank} → ${next.destination}`, 24),
+            icon: 'clock',
+            color: next.realtime ? SUCCESS : NEUTRAL,
+          }
+        : {
+            type: 'value',
+            value: '—',
+            label: { en: `Direction ${rank}`, fr: `Sens ${rank}` },
+            icon: 'clock',
+            color: NEUTRAL,
+          },
+    );
   }
-  return { value, color };
+
+  const board = departures.slice(0, BOARD_ROWS);
+  if (board.length === 0) {
+    components.push({
+      type: 'text',
+      variant: WIDGET_TEXT_VARIANTS.CAPTION,
+      text: { en: 'No departure in the next hour.', fr: 'Aucun passage dans l’heure.' },
+    });
+    return { ttl_seconds: TTL_SECONDS, components };
+  }
+
+  components.push({
+    type: 'status',
+    items: board.map((departure) => ({
+      label: truncate(`${info.lineCode} → ${departure.destination}`, 40),
+      value: truncate(formatWait(departure, language), 40),
+      color: rowColor(departure),
+    })),
+  });
+  if (board.some((departure) => !departure.realtime)) {
+    components.push({
+      type: 'text',
+      variant: WIDGET_TEXT_VARIANTS.CAPTION,
+      text: { en: '~ timetable, not tracked yet.', fr: '~ horaire théorique, pas encore suivi.' },
+    });
+  }
+  return { ttl_seconds: TTL_SECONDS, components };
 }
 
 export const WIDGETS = {
-  [DEMO_STATUS_WIDGET]: {
-    // `settings` holds the per-instance values of the declared `settings`
-    // (none here); `language` and `units` are those of the user viewing the
-    // dashboard, for the values you format yourself. Multi-language objects
-    // (`{ en, fr }`) are picked by the core, like everywhere else.
-    async get(gladys, { config }) {
-      logger.debug(`onWidgetGet <- ${DEMO_STATUS_WIDGET}`);
-      return {
-        // Reload policy: the computed parts below only change with the
-        // config, and index.js nudges the widget on every (re)connection and
-        // config update (see refreshWidgets) — the TTL is just a safety net.
-        ttl_seconds: 300,
-        components: [
-          // Device-bound tiles: LIVE, they follow the published states over
-          // the core's real-time path. No TTL, no nudge involved.
-          {
-            type: 'value',
-            label: { en: 'Temperature', fr: 'Température' },
-            icon: 'thermometer',
-            device_feature: featureExternalId(
-              gladys,
-              config,
-              weatherStation,
-              DEVICE_FEATURE_CATEGORIES.TEMPERATURE_SENSOR,
-            ),
-          },
-          {
-            type: 'value',
-            label: { en: 'Office plug', fr: 'Prise du bureau' },
-            icon: 'zap',
-            device_feature: featureExternalId(
-              gladys,
-              config,
-              plug,
-              DEVICE_FEATURE_CATEGORIES.ENERGY_SENSOR,
-            ),
-          },
-          // Computed rows: what the integration knows that no device feature
-          // carries. Served from the core cache until the TTL or a nudge.
-          {
-            type: 'status',
-            items: [
-              {
-                label: { en: 'Plug connection', fr: 'Connexion de la prise' },
-                icon: 'wifi',
-                ...plugConnectionStatus(gladys, config),
-              },
-              {
-                label: { en: 'Observed location', fr: 'Position observée' },
-                icon: 'map-pin',
-                value: `${config.latitude.toFixed(2)}, ${config.longitude.toFixed(2)}`,
-                color: WIDGET_COLORS.NEUTRAL,
-              },
-            ],
-          },
-          // `params` are declared HERE and sent back as-is: the handler never
-          // receives user input (a dashboard can hang on a public wall).
-          {
-            type: 'button',
-            label: { en: 'Identify the light', fr: 'Identifier la lampe' },
-            icon: 'eye',
-            style: 'secondary',
-            action: {
-              key: DEMO_STATUS_ACTIONS.IDENTIFY_LIGHT,
-              params: { device: light.deviceExternalId(gladys) },
-            },
-          },
-        ],
-      };
-    },
-
-    // Resolve an optional toast (string or multi-language object, ≤ 200
-    // characters). After a successful action the core drops the cached
-    // content and every open dashboard refetches it: no nudge needed.
-    async action(gladys, { actionKey, params, config }) {
-      logger.info(`onWidgetAction <- ${DEMO_STATUS_WIDGET}.${actionKey}`);
-      if (actionKey === DEMO_STATUS_ACTIONS.IDENTIFY_LIGHT) {
-        return identifyDevice(gladys, params.device, config);
+  [DEPARTURES_WIDGET]: {
+    async get(gladys, { settings, language, config }) {
+      let blueprint;
+      try {
+        blueprint = findSelectedBlueprint(gladys, settings?.device, config);
+      } catch (err) {
+        if (err instanceof DeviceSelectionError) return messageContent(err.userMessage, 300);
+        throw err;
       }
-      // Throwing acks the action as failed: the message reaches the user.
-      throw new Error(`Unknown widget action: ${actionKey}`);
+      try {
+        const departures = await blueprint.read();
+        return departuresContent(blueprint.describe(), departures, language === 'en' ? 'en' : 'fr');
+      } catch (err) {
+        if (err instanceof TbmApiError) {
+          logger.warn(`Widget ${DEPARTURES_WIDGET}: ${err.message}`);
+          return messageContent(err.userMessage, 60);
+        }
+        throw err;
+      }
     },
   },
 };
 
 /**
- * Freshness nudge: ask the core to re-pull every widget NOW instead of
- * waiting for the content TTL. Call it when you KNOW a computed content
- * changed (here: the config, which drives the plug transport and the observed
- * location) — and after every (re)connection, since the nudges are
- * fire-and-forget: rate-limited core-side to 1 per 10 s per widget, dropped
- * silently while disconnected.
+ * Ask the core to re-pull every widget now (after a reconnection or a
+ * configuration change). Fire-and-forget, rate-limited core-side.
  */
 export function refreshWidgets(gladys) {
   for (const key of Object.keys(WIDGETS)) {

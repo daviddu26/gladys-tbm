@@ -1,45 +1,96 @@
 // -----------------------------------------------------------------------------
 // Integration configuration.
 //
-// The configuration is filled in by the user in Gladys, from the `config_schema`
-// declared in `gladys-assistant-integration.json`. The SDK fetches it for you
-// (`gladys.getConfig()`) and notifies you of every change through
-// `gladys.onConfigUpdated()`.
-//
-// This module only provides defaults and normalizes the received object, so the
-// rest of the code never has to deal with `undefined`.
+// The values come from the `config_schema` of the manifest, filled in by the
+// user in Gladys. This module gives each one a default (the same as the
+// manifest's: test/manifest.test.js checks it), forces its type — a form may
+// send a number as a string, or an empty string — and parses the stations the
+// user typed by hand.
 // -----------------------------------------------------------------------------
 
-// Defaults: they MUST stay consistent with the `default` values declared in the
-// `config_schema` of the manifest.
 export const DEFAULT_CONFIG = {
-  latitude: 48.8566, // Paris
-  longitude: 2.3522,
-  unit: 'celsius', // 'celsius' | 'fahrenheit'
-  // Seconds between two reads of the polled sensors. Gladys polls at most once
-  // a minute: slower intervals are applied by skipping polls (see
-  // createPoller in src/devices/index.js).
-  poll_frequency: 300,
-  // Reserved key (NOT in config_schema): because the manifest declares both
-  // 'local' and 'cloud' in its `transports` field, Gladys shows a standard
-  // "Prefer the local connection" toggle and sends the user's choice here.
-  // Read-only for the integration; defaults to true.
-  GLADYS_PREFER_LOCAL: true,
+  // How many stations near the house are proposed in the Discovery tab, and
+  // how far from it. 600 m is a seven or eight minutes walk.
+  nearby_stations: 3,
+  nearby_radius: 600,
+  // The school buses (SCODI) call at many stations twice a day: proposing
+  // them everywhere would hide the lines people take every day.
+  include_school_lines: false,
+  // Stations typed by hand: "THDVA", "THDVA@A", "BQUIOR@2|5".
+  stations: '',
+  // Seconds between two reads of a station. A countdown is only useful while
+  // fresh; Gladys polls once a minute at most.
+  poll_frequency: 60,
+  // How many departures per direction the summary text lists.
+  max_departures: 3,
+  language: 'fr',
 };
 
+/** The bounds of the numeric settings, the same as the manifest's. */
+const BOUNDS = {
+  nearby_stations: [0, 8],
+  nearby_radius: [100, 3000],
+  poll_frequency: [60, 900],
+  max_departures: [1, 5],
+};
+
+function clampNumber(key, value) {
+  const number = Number(value);
+  if (value === '' || value === null || value === undefined || !Number.isFinite(number)) {
+    return DEFAULT_CONFIG[key];
+  }
+  const [min, max] = BOUNDS[key];
+  return Math.min(max, Math.max(min, Math.round(number)));
+}
+
 /**
- * Merge the user config with the defaults.
+ * One entry of the "stations" field: a station code, and optionally the
+ * lines to keep after "@", separated by "|" or "+".
+ *   "THDVA"        → every line of Hôtel de Ville (tram)
+ *   "BQUIOR@2|5"   → Lianes 2 and 5 at Quinconces (bus)
+ * @param {string} raw
+ * @returns {{ station: string, lines: string[] } | null}
+ */
+export function parseStationEntry(raw) {
+  const [stationPart, linesPart = ''] = String(raw ?? '').split('@');
+  const station = stationPart.trim().toUpperCase();
+  if (!/^[A-Z0-9_-]{2,20}$/.test(station)) return null;
+  const lines = linesPart
+    .split(/[|+]/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return { station, lines };
+}
+
+/**
+ * Every entry of the "stations" field (comma, semicolon or newline separated),
+ * and the ones that could not be read, to tell the user.
+ * @param {string} value
+ */
+export function parseStations(value) {
+  const entries = [];
+  const invalid = [];
+  for (const raw of String(value ?? '').split(/[,;\n]/)) {
+    if (!raw.trim()) continue;
+    const entry = parseStationEntry(raw);
+    if (entry) entries.push(entry);
+    else invalid.push(raw.trim());
+  }
+  return { entries, invalid };
+}
+
+/**
+ * Merge the user config with the defaults, with the right types.
  * @param {Record<string, unknown>} raw config returned by the SDK
  */
 export function normalizeConfig(raw = {}) {
-  return {
-    ...DEFAULT_CONFIG,
-    ...raw,
-    // Force the types: config may arrive as strings from a form.
-    latitude: Number(raw.latitude ?? DEFAULT_CONFIG.latitude),
-    longitude: Number(raw.longitude ?? DEFAULT_CONFIG.longitude),
-    poll_frequency: Number(raw.poll_frequency ?? DEFAULT_CONFIG.poll_frequency),
-    // The preference is a boolean; anything but an explicit false means true.
-    GLADYS_PREFER_LOCAL: raw.GLADYS_PREFER_LOCAL !== false,
-  };
+  const config = { ...DEFAULT_CONFIG, ...raw };
+  for (const key of Object.keys(BOUNDS)) {
+    config[key] = clampNumber(key, raw[key]);
+  }
+  config.include_school_lines = raw.include_school_lines === true;
+  config.stations = typeof raw.stations === 'string' ? raw.stations : '';
+  config.language = raw.language === 'en' ? 'en' : 'fr';
+  config.watched = parseStations(config.stations);
+  return config;
 }

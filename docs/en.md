@@ -1,61 +1,97 @@
-# Demo Devices Template
+# TBM Bordeaux
 
-This is the user documentation of the integration. Gladys re-hosts this file
-and shows a permanent **Documentation** link to it in the Configuration screen
-(in the user's language, with English as the fallback) — it is when
-configuring that the user needs it most. Keep the short onboarding hints in
-the `section` blocks of the manifest `config_schema`; put the long
-step-by-step (screenshots, troubleshooting…) here.
+This integration brings the **real-time departures** of the trams, buses and boats of the **TBM**
+network (Bordeaux Métropole) into Gladys, **direction by direction**: for each line followed at a
+station, you know in how many minutes the next vehicle of each direction leaves, and where it
+goes.
+
+No account, no key: the TBM real time is open data.
+
+> Community integration, not affiliated with TBM, Keolis Bordeaux Métropole Mobilités nor Bordeaux
+> Métropole.
+
+## Getting started
+
+1. **Give your house an address** in Gladys: **Settings → Houses**. The integration uses it to
+   find the stations nearby.
+2. Open the **Configuration** page of the integration and press **Save** (the defaults suit).
+3. Open the **Discover** tab: the lines of the 3 closest stations (within 600 m) are proposed
+   there, e.g. "TBM – Hôtel de Ville – Tram A". Press **Add** on the ones you want.
+
+The next departures arrive within a minute.
+
+With several houses in Gladys, the integration looks around the **first house that has an
+address**, in alphabetical order.
 
 ## What you get
 
-Six demo devices show up after installation: a weather station (real data
-from Open-Meteo), a switch, a dimmable light, a smart plug with power
-metering, a motion sensor and a camera.
+One device per **line at a station**. For each direction of the line:
 
-## Configuration
+| Feature                                   | Value                                         |
+| ----------------------------------------- | --------------------------------------------- |
+| Direction 1 → … · **next departure**      | minutes before the next departure (999: none) |
+| Direction 1 → … · **destination**         | where that vehicle goes, e.g. "La Gardette"   |
+| Direction 1 → … · **following departure** | minutes before the one after                  |
+| Direction 1 → … · **next departures**     | "La Gardette 3 min · Cenon Gare ~11 min (+2)" |
 
-1. Open the **Configuration** tab of the integration.
-2. Set the **latitude** and **longitude** the demo weather station should
-   observe (they default to Paris), and pick your temperature unit.
-   The **refresh interval** sets how often the weather station and the
-   plug's power are read: every 5 minutes by default, every minute at most.
-3. Save: the devices appear in the **Discovery** tab, ready to be added.
+The name of each feature says where the direction goes. The **destination** is the vehicle's own:
+on a branching line (tram A after Buttinière), direction 2 leaves for La Gardette one time and for
+Cenon Gare the next.
 
-The **Prefer the local connection** toggle drives the demo plug: it reports
-the channel it actually uses as a badge (local or cloud), with an orange dot
-when it runs degraded (local refused, cloud fallback).
+In the texts: **~11 min** is a timetable time (the vehicle is not tracked yet), **(+2)** a 2-minute
+delay, **now** less than a minute. Values keep no history.
 
-## Actions
+Set **Language of the values** to English for English feature names and texts.
 
-- **Test the weather provider** — performs a live request to Open-Meteo and
-  shows the current temperature and humidity under the button.
-- **Identify a device** — pick one of your devices in the list and it will
-  signal itself (the demo light "blinks" in the logs).
+## Following another station
 
-## Scenes
+1. At the bottom of the **Configuration** page, press **Find a station** and type part of the
+   name ("Quinconces"). The answer gives the code of each station and its lines. The tram and the
+   bus stopping at the same place are two stations (tram codes start with T, bus codes with B).
+2. Paste the code in **Stations**. To keep only some lines, add `@` and their numbers separated by
+   `|`: `THDVA` (every line of Hôtel de Ville), `THDVA@A` (tram A only), `BQUIOR@2|N6`. Several
+   stations: separate them with commas.
+3. Save, then add the devices from the **Discover** tab.
 
-The integration adds its own cards to the scene editor (Gladys 5.1 or
-later), under the **Integrations** category:
+## Settings
 
-- **Motion detected** (trigger) — starts the scene when a demo motion sensor
-  sees something move. Optionally pick the sensor and what moved (person,
-  animal); left empty, any detection matches. The following actions can
-  read what moved with `{{triggerEvent.data.target}}`.
-- **Identify a device** (action) — makes the chosen device signal itself.
-  It returns whether the device could signal itself, so the following
-  actions can depend on it.
+| Setting                   | Role                                                   | Default |
+| ------------------------- | ------------------------------------------------------ | ------- |
+| Stations near my home     | how many close stations are proposed (0: none)         | 3       |
+| Search radius (m)         | the farthest a proposed station may be from the house  | 600     |
+| Include the school buses  | also propose the SCODI school lines                    | no      |
+| Stations                  | stations typed by hand                                 | empty   |
+| Refresh interval (s)      | how often the departures are read                      | 60      |
+| Departures in the summary | departures per direction in the "next departures" text | 3       |
+| Language of the values    | language of the feature names and texts                | French  |
+
+Replacement buses during works ("Navette Tram", "Bus Relais") are not proposed automatically: add
+them by number in **Stations** if needed.
 
 ## Dashboard
 
-Add the **Demo status** widget to a dashboard: it shows the live
-temperature of the weather station and the power of the office plug, the
-connection the plug currently uses (orange when degraded) and the observed
-location. Its **Identify the light** button makes the demo light signal
-itself.
+The **TBM departures** widget shows a line at a station like a stop sign: one tile per direction
+with the next departure, then the next departures of both directions — green when tracked in real
+time, grey ("~") for a timetable time, orange from 5 minutes late.
 
-## Troubleshooting
+## Scenes
 
-The integration logs everything it does: check the integration logs from the
-Gladys UI (or `docker logs` on the host) with `LOG_LEVEL=debug` for the full
-detail.
+- Trigger **TBM departure approaching**: a vehicle of a followed line gets under the chosen number
+  of minutes (1, 2, 3, 5, 10 or 15), counted on its real-time departure. Filters: the line, the
+  direction, the minutes. Once per vehicle and per mark. Variables include a ready-made sentence:
+  "Hôtel de Ville: Tram A to La Gardette leaves in 5 min (17:58, 2 min late)."
+- Action **Read the next TBM departure**: the next departure of a line (one direction or both),
+  as outputs for the following actions of the scene.
+
+## Buttons of the configuration page
+
+- **Find a station** — finds the code of a station by its name.
+- **Test the connection** — reads TBM now and shows what it found.
+
+## Data
+
+Real time and network directory: TBM / Bordeaux Métropole,
+[Réseau urbain et scolaire TBM](https://transport.data.gouv.fr/datasets/offres-de-services-bus-tram-et-scolaire-au-format-gtfs-netex-gtfs-rt-siri-lite),
+under the [Licence Ouverte](https://www.etalab.gouv.fr/licence-ouverte-open-licence/). The
+directory is read once a day; the departures once a minute per station, however many of its lines
+are followed.

@@ -1,93 +1,159 @@
-import { test } from 'node:test';
+import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import { createFakeGladys } from '@gladysassistant/integration-sdk/testing';
-import { DEVICE_BLUEPRINTS } from '../src/devices/index.js';
-import { MOTION_DETECTED_TRIGGER, motionSensor } from '../src/devices/motionSensor.js';
-import { SCENE_ACTIONS } from '../src/scenes.js';
 import { normalizeConfig } from '../src/config.js';
+import { clearDeparturesCache } from '../src/api/departures.js';
+import { createPoller } from '../src/devices/index.js';
+import { clearSuggestions } from '../src/devices/suggestions.js';
+import { SCENE_ACTIONS } from '../src/scenes.js';
+import {
+  clearTriggerMemory,
+  departureCrossings,
+  departureSentence,
+  DEPARTURE_APPROACHING,
+} from '../src/triggers.js';
+import { useFixtureDirectory } from './helpers/directory.js';
+import { NOW, stopMonitoringPayload, visit } from './helpers/fixtures.js';
+import { stubFetch } from './helpers/stubFetch.js';
 
-const manifest = JSON.parse(
-  await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
-);
-const config = normalizeConfig();
-
-const declarationOf = (list, key) => manifest[list].find((entry) => entry.key === key);
-const keysOf = (list) => (list ?? []).map((entry) => entry.key);
-const deviceIdOf = (gladys, key) =>
-  DEVICE_BLUEPRINTS.find((bp) => bp.key === key).deviceExternalId(gladys);
-
-// Let the async interval callback run to completion.
-const flush = () => new Promise((resolve) => setImmediate(resolve));
-
-test('the motion sensor fires one motion_detected event per detection, none on the clear', async (t) => {
-  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout'] });
-  const gladys = createFakeGladys();
-  const stopPush = motionSensor.startPush(gladys, config);
-  try {
-    t.mock.timers.tick(60_000);
-    await flush();
-    assert.equal(gladys.fake.sceneEvents.length, 1, 'one detection, one event');
-    assert.equal(gladys.fake.sceneEvents[0].key, MOTION_DETECTED_TRIGGER);
-    assert.equal(gladys.fake.states.at(-1).state, 1, 'the state is still published');
-
-    t.mock.timers.tick(10_000);
-    await flush();
-    assert.equal(gladys.fake.states.at(-1).state, 0, 'the detection is cleared');
-    assert.equal(gladys.fake.sceneEvents.length, 1, 'the clear fires no event');
-  } finally {
-    stopPush();
-  }
+beforeEach(() => {
+  useFixtureDirectory();
+  clearSuggestions();
+  clearDeparturesCache();
+  clearTriggerMemory();
 });
 
-test('motion_detected data only carries keys the trigger declares', async (t) => {
-  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout'] });
-  const gladys = createFakeGladys();
-  const stopPush = motionSensor.startPush(gladys, config);
-  try {
-    t.mock.timers.tick(60_000);
-    await flush();
-  } finally {
-    stopPush();
-  }
-  const [{ data }] = gladys.fake.sceneEvents;
-  const trigger = declarationOf('scene_triggers', MOTION_DETECTED_TRIGGER);
-  // The core keeps the `fields` keys (filters) and the `variables` keys
-  // (exposed to the scene): any other key would be silently dropped.
-  const declared = [...keysOf(trigger.fields), ...keysOf(trigger.variables)];
-  for (const [key, value] of Object.entries(data)) {
-    assert.ok(declared.includes(key), `data.${key} is not declared, the core would drop it`);
-    assert.ok(value === null || typeof value !== 'object', `data.${key} must be a primitive`);
-  }
-  // A `"source": "devices"` filter stores a device external_id.
-  assert.equal(data.device, deviceIdOf(gladys, 'motion-sensor'));
-  const targets = trigger.fields.find((field) => field.key === 'target').options;
-  assert.ok(
-    targets.some((option) => option.value === data.target),
-    `data.target "${data.target}" must be one of the filter options`,
+test('a vehicle crossing marks fires each of them, once, by journey', () => {
+  const previous = [
+    { journey: 'a', minutes: 11 },
+    { journey: 'b', minutes: 3 },
+  ];
+  const current = [
+    { journey: 'a', minutes: 4 },
+    { journey: 'b', minutes: 3 },
+    { journey: 'c', minutes: 1 },
+  ];
+  assert.deepEqual(
+    departureCrossings(previous, current).map((c) => [c.departure.journey, c.threshold]),
+    [
+      ['a', 5],
+      ['a', 10],
+    ],
+  );
+  // A vehicle that just appeared is not approaching; one without id is not followed.
+  assert.deepEqual(departureCrossings([{ minutes: 9 }], [{ minutes: 2 }]), []);
+});
+
+test('the sentence a scene can send as is', () => {
+  const info = { stationName: 'Hôtel de Ville', lineName: 'Tram A' };
+  const departure = {
+    destination: 'La Gardette',
+    minutes: 5,
+    time: NOW + 300_000,
+    delayMinutes: 2,
+  };
+  assert.equal(
+    departureSentence(info, departure),
+    'Hôtel de Ville : Tram A vers La Gardette passe dans 5 min (17:58, 2 min de retard).',
+  );
+  assert.equal(
+    departureSentence(info, { ...departure, minutes: 0, delayMinutes: null }, 'en'),
+    'Hôtel de Ville: Tram A to La Gardette is at the stop (17:58).',
   );
 });
 
-test('identify_device signals the chosen device and returns the declared outputs', async () => {
-  const gladys = createFakeGladys();
-  const outputs = await SCENE_ACTIONS.identify_device(gladys, {
-    fields: { device: deviceIdOf(gladys, 'light') },
-    config,
+test('the poll fires "departure approaching" between two reads', async (t) => {
+  // Read 1: the tram to La Gardette is 11 min away; read 2: 4 min.
+  let offset = 660;
+  stubFetch(t, {
+    'stop-monitoring': () =>
+      stopMonitoringPayload([
+        visit({
+          line: '59',
+          direction: '1',
+          directionName: 'Cenon Gare / La Gardette / Thiers Benauge',
+          quay: '3719',
+          destination: 'La Gardette',
+          journey: 'A-1',
+          aimed: offset - 60,
+          expected: offset,
+        }),
+      ]),
   });
-  assert.deepEqual(outputs, { signalled: true });
-  const declared = keysOf(declarationOf('scene_actions', 'identify_device').outputs);
-  for (const key of Object.keys(outputs)) {
-    assert.ok(declared.includes(key), `output "${key}" is not declared, the core would drop it`);
-  }
+  const gladys = createFakeGladys();
+  const config = normalizeConfig({ stations: 'THDVA@A' });
+  const poll = createPoller();
+  const device = { external_id: gladys.externalIds('station-line', 'THDVA-59').device };
+
+  await poll(gladys, device, config, { now: NOW });
+  assert.equal(gladys.fake.sceneEvents.length, 0, 'nothing on the first read');
+
+  offset = 240 + 60; // read 2 happens a minute later: 4 min left
+  await poll(gladys, device, config, { now: NOW + 60_000 });
+  const events = gladys.fake.sceneEvents;
+  assert.deepEqual(
+    events.map((event) => [event.key, event.data.threshold]),
+    [
+      [DEPARTURE_APPROACHING, '5'],
+      [DEPARTURE_APPROACHING, '10'],
+    ],
+  );
+  assert.deepEqual(events[0].data, {
+    device: device.external_id,
+    direction: '1',
+    threshold: '5',
+    stop_name: 'Hôtel de Ville',
+    line: 'A',
+    direction_rank: 2,
+    destination: 'La Gardette',
+    minutes: 4,
+    delay: 1,
+    realtime: true,
+    time: '17:58',
+    summary: 'Hôtel de Ville : Tram A vers La Gardette passe dans 4 min (17:58, 1 min de retard).',
+  });
 });
 
-test('identify_device reports a device that cannot signal itself through its output', async () => {
-  // Not a failure: a scene action is never a condition, the scene author
-  // gates the following actions on the output instead.
+test('the scene action returns the next departure, one direction or both', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: NOW });
+  stubFetch(t);
   const gladys = createFakeGladys();
-  const outputs = await SCENE_ACTIONS.identify_device(gladys, {
-    fields: { device: deviceIdOf(gladys, 'weather-station') },
+  const config = normalizeConfig({ stations: 'THDVA@A' });
+  const device = gladys.externalIds('station-line', 'THDVA-59').device;
+
+  const both = await SCENE_ACTIONS.get_next_departures(gladys, { fields: { device }, config });
+  assert.deepEqual(both, {
+    found: true,
+    minutes: 1,
+    following_minutes: 2,
+    line: 'A',
+    destination: 'La Gardette',
+    direction_rank: 2,
+    time: '17:54',
+    delay: 1,
+    realtime: true,
+    summary: 'Hôtel de Ville : Tram A vers La Gardette passe dans 1 min (17:54, 1 min de retard).',
+  });
+
+  const towardsPellegrin = await SCENE_ACTIONS.get_next_departures(gladys, {
+    fields: { device, direction: '0' },
     config,
   });
-  assert.deepEqual(outputs, { signalled: false });
+  assert.equal(towardsPellegrin.destination, 'Le Haillan Rostand');
+  assert.equal(towardsPellegrin.delay, 7);
+  assert.equal(towardsPellegrin.following_minutes, 9);
+});
+
+test('the scene action says when nothing comes', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: NOW });
+  stubFetch(t, { 'stop-monitoring': () => stopMonitoringPayload([]) });
+  const gladys = createFakeGladys();
+  const config = normalizeConfig({ stations: 'THDVA@A' });
+  const result = await SCENE_ACTIONS.get_next_departures(gladys, {
+    fields: { device: gladys.externalIds('station-line', 'THDVA-59').device },
+    config,
+  });
+  assert.equal(result.found, false);
+  assert.equal(result.minutes, -1);
+  assert.equal(result.summary, 'Hôtel de Ville : aucun passage du Tram A dans l’heure.');
 });

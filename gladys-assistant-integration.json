@@ -1,147 +1,263 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "TBM Bordeaux",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Real-time departures of the TBM trams, buses and boats (Bordeaux), by direction.",
+    "fr": "Prochains passages en temps réel des trams, bus et bateaux TBM (Bordeaux), par sens."
   },
-  "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "version": "0.0.0",
+  "docker_image": "ghcr.io/daviddu26/gladys-tbm:0.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/daviddu26/gladys-tbm/main/cover.png",
+  "categories": ["services"],
+  "transports": ["cloud"],
+  "location": true,
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": { "en": "Get started in 2 minutes", "fr": "Démarrer en 2 minutes" },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "1. Check that your house has an address in Gladys (Settings → Houses). 2. Save this page. 3. Open the “Discover” tab of this integration and press “Add” on the lines near your home. That's it: the next departures arrive within a minute. No account, no key: the TBM real time is open data.",
+        "fr": "1. Vérifiez que votre maison a une adresse dans Gladys (Paramètres → Maisons). 2. Enregistrez cette page. 3. Ouvrez l’onglet « Découverte » de cette intégration et cliquez sur « Ajouter » sur les lignes près de chez vous. C’est tout : les prochains passages arrivent dans la minute. Pas de compte, pas de clé : le temps réel TBM est en données ouvertes."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://github.com/daviddu26/gladys-tbm/blob/main/docs/fr.md",
+          "label": { "en": "Step-by-step guide", "fr": "Guide pas à pas" }
+        },
+        {
+          "url": "https://transport.data.gouv.fr/datasets/offres-de-services-bus-tram-et-scolaire-au-format-gtfs-netex-gtfs-rt-siri-lite",
+          "label": { "en": "TBM open data", "fr": "Données ouvertes TBM" }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
+      "key": "nearby",
+      "type": "section",
+      "label": { "en": "Near my home", "fr": "Près de chez moi" },
       "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
-      },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+        "en": "The lines of the closest stations are proposed in the “Discover” tab, one device per line, both directions in it.",
+        "fr": "Les lignes des stations les plus proches sont proposées dans l’onglet « Découverte », un appareil par ligne avec ses deux sens."
+      }
     },
     {
-      "key": "longitude",
+      "key": "nearby_stations",
       "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
+      "label": { "en": "Stations near my home", "fr": "Stations près de chez moi" },
       "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+        "en": "How many of the closest stations are proposed. 0 turns the suggestion off.",
+        "fr": "Combien de stations parmi les plus proches sont proposées. 0 désactive la suggestion."
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
-    },
-    {
-      "key": "unit",
-      "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
       "required": false,
-      "default": "celsius",
-      "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
-      ]
+      "default": 3,
+      "min": 0,
+      "max": 8
+    },
+    {
+      "key": "nearby_radius",
+      "type": "number",
+      "label": { "en": "Search radius (m)", "fr": "Rayon de recherche (m)" },
+      "description": {
+        "en": "Only the stations within this distance of the house, in meters.",
+        "fr": "Seulement les stations à moins de cette distance de la maison, en mètres."
+      },
+      "required": false,
+      "default": 600,
+      "min": 100,
+      "max": 3000
+    },
+    {
+      "key": "include_school_lines",
+      "type": "boolean",
+      "label": { "en": "Include the school buses", "fr": "Inclure les bus scolaires" },
+      "description": {
+        "en": "Also propose the SCODI school lines calling at these stations.",
+        "fr": "Proposer aussi les lignes scolaires SCODI qui desservent ces stations."
+      },
+      "required": false,
+      "default": false
+    },
+    {
+      "key": "watch",
+      "type": "section",
+      "label": { "en": "Other stations (optional)", "fr": "Autres stations (facultatif)" },
+      "description": {
+        "en": "To follow a station that is not near your home (work, school…): find its code with the “Find a station” button at the bottom of this page, and paste it here.",
+        "fr": "Pour suivre une station qui n’est pas près de chez vous (travail, école…) : trouvez son code avec le bouton « Chercher une station » en bas de cette page, et collez-le ici."
+      }
+    },
+    {
+      "key": "stations",
+      "type": "string",
+      "label": { "en": "Stations", "fr": "Stations" },
+      "description": {
+        "en": "Station codes, separated by commas. After @, the lines to keep (separated by |), otherwise all of them: \"THDVA, BQUIOR@2|5\".",
+        "fr": "Codes de station, séparés par des virgules. Après @, les lignes à garder (séparées par |), sinon toutes : « THDVA, BQUIOR@2|5 »."
+      },
+      "required": false,
+      "placeholder": { "en": "THDVA, BQUIOR@2|5", "fr": "THDVA, BQUIOR@2|5" }
+    },
+    {
+      "key": "advanced",
+      "type": "section",
+      "label": { "en": "Advanced", "fr": "Avancé" },
+      "description": {
+        "en": "The defaults suit almost everyone. One request serves every line of a station.",
+        "fr": "Les valeurs par défaut conviennent à presque tout le monde. Une seule requête sert toutes les lignes d’une station."
+      }
     },
     {
       "key": "poll_frequency",
       "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "label": { "en": "Refresh interval (s)", "fr": "Rafraîchissement (s)" },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "How often the departures are read, in seconds (one minute minimum).",
+        "fr": "Fréquence de lecture des passages, en secondes (une minute minimum)."
       },
       "required": false,
-      "default": 300,
+      "default": 60,
       "min": 60,
-      "max": 3600
+      "max": 900
+    },
+    {
+      "key": "max_departures",
+      "type": "number",
+      "label": { "en": "Departures in the summary", "fr": "Passages dans le résumé" },
+      "description": {
+        "en": "How many departures per direction the “next departures” text lists.",
+        "fr": "Nombre de passages par sens listés dans le texte « prochains passages »."
+      },
+      "required": false,
+      "default": 3,
+      "min": 1,
+      "max": 5
+    },
+    {
+      "key": "language",
+      "type": "select",
+      "label": { "en": "Language of the values", "fr": "Langue des valeurs" },
+      "description": {
+        "en": "Language of the feature names and of the texts published.",
+        "fr": "Langue des noms de fonctionnalités et des textes publiés."
+      },
+      "required": false,
+      "default": "fr",
+      "options": [
+        { "value": "fr", "label": { "en": "French", "fr": "Français" } },
+        { "value": "en", "label": { "en": "English", "fr": "Anglais" } }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
+      "key": "search_stations",
+      "label": { "en": "Find a station", "fr": "Chercher une station" },
+      "timeout_seconds": 30,
       "fields": [
         {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "key": "query",
+          "type": "string",
+          "label": { "en": "Station name", "fr": "Nom de la station" },
+          "placeholder": { "en": "Quinconces", "fr": "Quinconces" },
           "required": true
         }
       ]
+    },
+    {
+      "key": "test_connection",
+      "label": { "en": "Test the connection", "fr": "Tester la connexion" },
+      "timeout_seconds": 30
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "departure_approaching",
+      "label": { "en": "TBM departure approaching", "fr": "TBM : passage imminent" },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "A tram, bus or boat of a followed line is now less than the chosen number of minutes away.",
+        "fr": "Un tram, bus ou bateau d’une ligne suivie passe désormais dans moins du nombre de minutes choisi."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
+          "label": { "en": "Line at a station", "fr": "Ligne à une station" }
         },
         {
-          "key": "target",
-          "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
+          "key": "direction",
+          "type": "select",
+          "label": { "en": "Direction", "fr": "Sens" },
+          "description": {
+            "en": "As in the feature names of the device. Empty: both.",
+            "fr": "Comme dans les noms des fonctionnalités de l’appareil. Vide : les deux."
+          },
           "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
+            { "value": "0", "label": { "en": "Direction 1", "fr": "Sens 1" } },
+            { "value": "1", "label": { "en": "Direction 2", "fr": "Sens 2" } }
+          ]
+        },
+        {
+          "key": "threshold",
+          "type": "select",
+          "label": { "en": "Minutes before it passes", "fr": "Minutes avant le passage" },
+          "required": true,
+          "options": [
+            { "value": "1", "label": { "en": "1 minute", "fr": "1 minute" } },
+            { "value": "2", "label": { "en": "2 minutes", "fr": "2 minutes" } },
+            { "value": "3", "label": { "en": "3 minutes", "fr": "3 minutes" } },
+            { "value": "5", "label": { "en": "5 minutes", "fr": "5 minutes" } },
+            { "value": "10", "label": { "en": "10 minutes", "fr": "10 minutes" } },
+            { "value": "15", "label": { "en": "15 minutes", "fr": "15 minutes" } }
           ]
         }
       ],
       "variables": [
+        { "key": "stop_name", "type": "string", "label": { "en": "Station", "fr": "Station" } },
+        { "key": "line", "type": "string", "label": { "en": "Line", "fr": "Ligne" } },
         {
-          "key": "target",
+          "key": "direction_rank",
+          "type": "number",
+          "label": { "en": "Direction (1 or 2)", "fr": "Sens (1 ou 2)" }
+        },
+        {
+          "key": "destination",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": { "en": "Destination", "fr": "Destination" }
+        },
+        {
+          "key": "minutes",
+          "type": "number",
+          "label": { "en": "Minutes to wait", "fr": "Minutes d’attente" }
+        },
+        {
+          "key": "delay",
+          "type": "number",
+          "label": { "en": "Delay (min)", "fr": "Retard (min)" }
+        },
+        {
+          "key": "realtime",
+          "type": "boolean",
+          "label": { "en": "Tracked in real time", "fr": "Suivi en temps réel" }
+        },
+        { "key": "time", "type": "string", "label": { "en": "Time", "fr": "Heure" } },
+        {
+          "key": "summary",
+          "type": "string",
+          "label": { "en": "Ready-made sentence", "fr": "Phrase toute faite" }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
+      "key": "get_next_departures",
+      "label": { "en": "Read the next TBM departure", "fr": "Lire le prochain passage TBM" },
       "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+        "en": "Reads the next departure of a line at a station, for a notification or an announcement.",
+        "fr": "Lit le prochain passage d’une ligne à une station, pour une notification ou une annonce."
       },
       "timeout_seconds": 15,
       "fields": [
@@ -149,29 +265,83 @@
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "label": { "en": "Line at a station", "fr": "Ligne à une station" },
           "required": true
+        },
+        {
+          "key": "direction",
+          "type": "select",
+          "label": { "en": "Direction", "fr": "Sens" },
+          "options": [
+            { "value": "0", "label": { "en": "Direction 1", "fr": "Sens 1" } },
+            { "value": "1", "label": { "en": "Direction 2", "fr": "Sens 2" } }
+          ]
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
+          "key": "found",
           "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "label": { "en": "Departure found", "fr": "Passage trouvé" }
+        },
+        {
+          "key": "minutes",
+          "type": "number",
+          "label": { "en": "Minutes to wait (-1: none)", "fr": "Minutes d’attente (-1 : aucun)" }
+        },
+        {
+          "key": "following_minutes",
+          "type": "number",
+          "label": { "en": "Following one (min)", "fr": "Le suivant (min)" }
+        },
+        { "key": "line", "type": "string", "label": { "en": "Line", "fr": "Ligne" } },
+        {
+          "key": "destination",
+          "type": "string",
+          "label": { "en": "Destination", "fr": "Destination" }
+        },
+        {
+          "key": "direction_rank",
+          "type": "number",
+          "label": { "en": "Direction (1 or 2)", "fr": "Sens (1 ou 2)" }
+        },
+        { "key": "time", "type": "string", "label": { "en": "Time", "fr": "Heure" } },
+        {
+          "key": "delay",
+          "type": "number",
+          "label": { "en": "Delay (min)", "fr": "Retard (min)" }
+        },
+        {
+          "key": "realtime",
+          "type": "boolean",
+          "label": { "en": "Tracked in real time", "fr": "Suivi en temps réel" }
+        },
+        {
+          "key": "summary",
+          "type": "string",
+          "label": { "en": "Ready-made sentence", "fr": "Phrase toute faite" }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
+      "key": "departures",
+      "label": { "en": "TBM departures", "fr": "Passages TBM" },
       "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+        "en": "The next departures of a line at a station, in both directions.",
+        "fr": "Les prochains passages d’une ligne à une station, dans les deux sens."
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "icon": "clock",
+      "settings": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Line at a station", "fr": "Ligne à une station" },
+          "required": true
+        }
+      ]
     }
   ]
 }

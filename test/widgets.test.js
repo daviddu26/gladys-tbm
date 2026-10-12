@@ -1,77 +1,91 @@
-import { test } from 'node:test';
+import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateWidgetContent } from '@gladysassistant/integration-sdk';
 import { createFakeGladys } from '@gladysassistant/integration-sdk/testing';
-import { buildDiscoveredDevices } from '../src/devices/index.js';
-import { simulateLanSession } from '../src/devices/plug.js';
-import { DEMO_STATUS_WIDGET, WIDGETS, refreshWidgets } from '../src/widgets.js';
 import { normalizeConfig } from '../src/config.js';
+import { clearDeparturesCache, upcoming, parseDepartures } from '../src/api/departures.js';
+import { clearSuggestions } from '../src/devices/suggestions.js';
+import { DEPARTURES_WIDGET, departuresContent, truncate, WIDGETS } from '../src/widgets.js';
+import { useFixtureDirectory } from './helpers/directory.js';
+import { NOW, stopMonitoringPayload } from './helpers/fixtures.js';
+import { stubFetch } from './helpers/stubFetch.js';
 
-const gladys = createFakeGladys();
-const config = normalizeConfig();
-const demoStatus = WIDGETS[DEMO_STATUS_WIDGET];
-
-// What the SDK passes to onWidgetGet, plus the config index.js adds.
-const getContent = (cfg = config) =>
-  demoStatus.get(gladys, { settings: {}, language: 'en', units: 'metric', config: cfg });
-
-test('the demo_status content is rendered exactly as sent', async () => {
-  // [] = nothing the core would drop, truncate or trim to the content budget.
-  assert.deepEqual(validateWidgetContent(await getContent()), []);
+beforeEach(() => {
+  useFixtureDirectory();
+  clearSuggestions();
+  clearDeparturesCache();
 });
 
-test('the degraded plug connection content is valid too', async () => {
-  simulateLanSession(false);
-  try {
-    const content = await getContent();
-    assert.deepEqual(validateWidgetContent(content), []);
-    const status = content.components.find((component) => component.type === 'status');
-    assert.ok(
-      status.items.some((item) => item.color === 'warning'),
-      'degraded shows a warning',
-    );
-  } finally {
-    simulateLanSession(true);
-  }
-});
+const INFO = {
+  stationName: 'Hôtel de Ville',
+  lineName: 'Tram A',
+  lineCode: 'A',
+  directions: ['0', '1'],
+};
 
-test('the live tiles reference features the integration publishes', async () => {
-  const featureIds = new Set(
-    buildDiscoveredDevices(gladys, config).flatMap((device) =>
-      device.features.map((feature) => feature.external_id),
-    ),
+const tramA = () => upcoming(parseDepartures(stopMonitoringPayload()), { lineId: '59', now: NOW });
+
+test('the board: a tile per direction, the departures, the timetable caption', () => {
+  const content = departuresContent(INFO, tramA());
+  assert.deepEqual(validateWidgetContent(content), []);
+  const [heading, sens1, sens2, board, caption] = content.components;
+  assert.equal(heading.text, 'Hôtel de Ville · Tram A');
+  assert.deepEqual(
+    [sens1.value, sens1.label, sens1.color],
+    [2, '1 → Le Haillan Rostand', 'success'],
   );
-  const liveTiles = (await getContent()).components.filter((c) => c.device_feature);
-  assert.ok(liveTiles.length > 0, 'the template demonstrates a device-bound tile');
-  for (const tile of liveTiles) {
-    assert.ok(featureIds.has(tile.device_feature), `unknown feature ${tile.device_feature}`);
-  }
-});
-
-test('every button action of the content is handled and answers a short toast', async () => {
-  const buttons = (await getContent()).components.filter((c) => c.type === 'button' && c.action);
-  assert.ok(buttons.length > 0, 'the template demonstrates a widget action');
-  for (const { action } of buttons) {
-    const message = await demoStatus.action(gladys, {
-      actionKey: action.key,
-      params: action.params ?? {},
-      settings: {},
-      config,
-    });
-    assert.ok(message.en, 'the toast carries at least the mandatory `en` text');
-    assert.ok(message.en.length <= 200, 'toasts are capped at 200 characters');
-  }
-});
-
-test('an unknown widget action fails, so the user sees the error', async () => {
-  await assert.rejects(
-    demoStatus.action(gladys, { actionKey: 'unknown', params: {}, settings: {}, config }),
-    /Unknown widget action/,
+  assert.deepEqual([sens2.value, sens2.label], [1, '2 → La Gardette']);
+  assert.deepEqual(
+    board.items.map((item) => [item.label, item.value, item.color]),
+    [
+      ['A → La Gardette', '1 min', 'success'],
+      ['A → Le Haillan Rostand', '2 min (+7)', 'warning'],
+      ['A → Cenon Gare', '~3 min', 'neutral'],
+      ['A → Hôpital Pellegrin', '9 min', 'success'],
+    ],
   );
+  assert.equal(caption.variant, 'caption');
+  assert.equal(content.ttl_seconds, 30);
 });
 
-test('refreshWidgets nudges every widget', () => {
-  const fresh = createFakeGladys();
-  refreshWidgets(fresh);
-  assert.deepEqual(fresh.fake.widgetRefreshes, Object.keys(WIDGETS));
+test('an empty board says so, and stays valid', () => {
+  const content = departuresContent(INFO, []);
+  assert.deepEqual(validateWidgetContent(content), []);
+  assert.equal(content.components[1].value, '—');
+  assert.match(content.components.at(-1).text.fr, /Aucun passage/);
+});
+
+test('the widget reads the device chosen in its settings', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: NOW });
+  stubFetch(t);
+  const gladys = createFakeGladys();
+  const config = normalizeConfig({ stations: 'THDVA@A' });
+  const device = gladys.externalIds('station-line', 'THDVA-59').device;
+  const content = await WIDGETS[DEPARTURES_WIDGET].get(gladys, {
+    settings: { device },
+    language: 'fr',
+    config,
+  });
+  assert.deepEqual(validateWidgetContent(content), []);
+  assert.equal(content.components[0].text, 'Hôtel de Ville · Tram A');
+});
+
+test('a missing device or an API outage is a card that says so', async (t) => {
+  stubFetch(t, { 'stop-monitoring': { status: 503 } });
+  const gladys = createFakeGladys();
+  const config = normalizeConfig({ stations: 'THDVA@A' });
+  const none = await WIDGETS[DEPARTURES_WIDGET].get(gladys, { settings: {}, config });
+  assert.deepEqual(validateWidgetContent(none), []);
+  assert.match(none.components[0].text.fr, /Choisissez une ligne/);
+  const down = await WIDGETS[DEPARTURES_WIDGET].get(gladys, {
+    settings: { device: gladys.externalIds('station-line', 'THDVA-59').device },
+    config,
+  });
+  assert.deepEqual(validateWidgetContent(down), []);
+  assert.match(down.components[0].text.fr, /ne répond pas/);
+});
+
+test('texts are cut to the budget of their component', () => {
+  assert.equal(truncate('abcdef', 4), 'abc…');
+  assert.equal(truncate('abc', 4), 'abc');
 });
