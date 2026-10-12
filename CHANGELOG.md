@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-10-12
+
 ### Added
 
 - The last departure of a direction before a break in service (usually the
@@ -59,6 +61,7 @@ the notes of the version's GitHub Release.
 - The network directory is read once a day and kept in `/data`: a restart or an
   API outage keeps the stations known.
 
-[Unreleased]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.2...HEAD
+[Unreleased]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.3...HEAD
+[0.0.3]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/daviddu26/gladys-tbm/releases/tag/v0.0.1
