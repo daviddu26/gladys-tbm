@@ -77,13 +77,13 @@ export function departureSentence(info, departure, language = 'fr') {
   const late = departure.delayMinutes >= 1;
   if (language === 'en') {
     const when = departure.minutes === 0 ? 'is at the stop' : `leaves in ${departure.minutes} min`;
-    const details = [time, late ? `${departure.delayMinutes} min late` : null]
+    const details = [time, late ? `incl. ${departure.delayMinutes} min delay` : null]
       .filter(Boolean)
       .join(', ');
     return `${info.stationName}: ${info.lineName} to ${departure.destination} ${when} (${details}).`;
   }
   const when = departure.minutes === 0 ? 'est à l’arrêt' : `passe dans ${departure.minutes} min`;
-  const details = [time, late ? `${departure.delayMinutes} min de retard` : null]
+  const details = [time, late ? `dont ${departure.delayMinutes} min de retard` : null]
     .filter(Boolean)
     .join(', ');
   return `${info.stationName} : ${info.lineName} vers ${departure.destination} ${when} (${details}).`;

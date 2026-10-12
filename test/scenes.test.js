@@ -54,7 +54,7 @@ test('the sentence a scene can send as is', () => {
   };
   assert.equal(
     departureSentence(info, departure),
-    'Hôtel de Ville : Tram A vers La Gardette passe dans 5 min (17:58, 2 min de retard).',
+    'Hôtel de Ville : Tram A vers La Gardette passe dans 5 min (17:58, dont 2 min de retard).',
   );
   assert.equal(
     departureSentence(info, { ...departure, minutes: 0, delayMinutes: null }, 'en'),
@@ -110,7 +110,8 @@ test('the poll fires "departure approaching" between two reads', async (t) => {
     delay: 1,
     realtime: true,
     time: '17:58',
-    summary: 'Hôtel de Ville : Tram A vers La Gardette passe dans 4 min (17:58, 1 min de retard).',
+    summary:
+      'Hôtel de Ville : Tram A vers La Gardette passe dans 4 min (17:58, dont 1 min de retard).',
   });
 });
 
@@ -132,7 +133,8 @@ test('the scene action returns the next departure, one direction or both', async
     time: '17:54',
     delay: 1,
     realtime: true,
-    summary: 'Hôtel de Ville : Tram A vers La Gardette passe dans 1 min (17:54, 1 min de retard).',
+    summary:
+      'Hôtel de Ville : Tram A vers La Gardette passe dans 1 min (17:54, dont 1 min de retard).',
   });
 
   const towardsPellegrin = await SCENE_ACTIONS.get_next_departures(gladys, {

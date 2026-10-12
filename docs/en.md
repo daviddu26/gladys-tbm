@@ -27,20 +27,20 @@ address**, in alphabetical order.
 
 One device per **line at a station**. For each direction of the line:
 
-| Feature                                   | Value                                                |
-| ----------------------------------------- | ---------------------------------------------------- |
-| Direction 1 → … · **next departure**      | minutes before the next departure (999: none)        |
-| Direction 1 → … · **destination**         | where that vehicle goes, e.g. "La Gardette"          |
-| Direction 1 → … · **following departure** | minutes before the one after                         |
-| Direction 1 → … · **next departures**     | "La Gardette 3 min · Cenon Gare 11 min (2 min late)" |
+| Feature                                   | Value                                                       |
+| ----------------------------------------- | ----------------------------------------------------------- |
+| Direction 1 → … · **next departure**      | minutes before the next departure (999: none)               |
+| Direction 1 → … · **destination**         | where that vehicle goes, e.g. "La Gardette"                 |
+| Direction 1 → … · **following departure** | minutes before the one after                                |
+| Direction 1 → … · **next departures**     | "La Gardette 3 min · Cenon Gare 11 min (incl. 2 min delay)" |
 
 The name of each feature says where the direction goes. The **destination** is the vehicle's own:
 on a branching line (tram A after Buttinière), direction 2 leaves for La Gardette one time and for
 Cenon Gare the next.
 
-In the texts: **~11 min** is a timetable time (the vehicle is not tracked yet); **(2 min late)** a
-delay, already counted in the minutes shown ("11 min (2 min late)": it leaves in 11 minutes instead
-of 9); **(last)** the last departure of the direction before a break of more than two hours, that
+In the texts: **~11 min** is a timetable time (the vehicle is not tracked yet); **(incl. 2 min delay)**
+a delay already counted in the minutes shown ("11 min (incl. 2 min delay)": it leaves in 11 minutes
+instead of 9, nothing to add); **(last)** the last departure of the direction before a break of more than two hours, that
 is usually the last of the evening, flagged up to two hours ahead; **now** less than a minute.
 Values keep no history.
 
@@ -91,7 +91,7 @@ its own.
 - Trigger **TBM departure approaching**: a vehicle of a followed line gets under the chosen number
   of minutes (1, 2, 3, 5, 10 or 15), counted on its real-time departure. Filters: the line, the
   direction, the minutes. Once per vehicle and per mark. Variables include a ready-made sentence:
-  "Hôtel de Ville: Tram A to La Gardette leaves in 5 min (17:58, 2 min late)."
+  "Hôtel de Ville: Tram A to La Gardette leaves in 5 min (17:58, incl. 2 min delay)."
 - Action **Read the next TBM departure**: the next departure of a line (one direction or both),
   as outputs for the following actions of the scene.
 

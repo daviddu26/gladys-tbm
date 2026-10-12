@@ -109,7 +109,7 @@ test('the texts of a direction', () => {
   assert.equal(formatWait({ minutes: 11, realtime: false, delayMinutes: null }), '~11 min');
   assert.equal(
     formatWait({ minutes: 2, realtime: true, delayMinutes: 7 }),
-    '2 min (7 min de retard)',
+    '2 min (dont 7 min de retard)',
   );
   assert.equal(formatWait({ minutes: 0, realtime: true, delayMinutes: 1 }), 'à l’arrêt');
   assert.equal(formatWait({ minutes: 0, realtime: true, delayMinutes: 0 }, 'en'), 'now');
@@ -119,7 +119,11 @@ test('the texts of a direction', () => {
   );
   assert.equal(
     formatWait({ minutes: 12, realtime: true, delayMinutes: 2, last: true }, 'en'),
-    '12 min (2 min late, last)',
+    '12 min (incl. 2 min delay, last)',
+  );
+  // The longest text still fits the 40 characters of a widget value.
+  assert.ok(
+    formatWait({ minutes: 240, realtime: true, delayMinutes: 59, last: true }).length <= 40,
   );
   assert.equal(formatSummary([], 3), 'Aucun passage à venir');
   assert.equal(
@@ -244,7 +248,7 @@ test('a poll publishes both directions, then only what moved', async (t) => {
   // Read four hours ahead: the third departure is the timetable one of later.
   assert.equal(
     state('d0_summary'),
-    'Le Haillan Rostand 2 min (7 min de retard) · Hôpital Pellegrin 9 min · Le Haillan Rostand ~80 min',
+    'Le Haillan Rostand 2 min (dont 7 min de retard) · Hôpital Pellegrin 9 min · Le Haillan Rostand ~80 min',
   );
   assert.equal(state('d1_next'), 1);
   assert.equal(state('d1_destination'), 'La Gardette');

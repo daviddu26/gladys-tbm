@@ -15,6 +15,11 @@ the notes of the version's GitHub Release.
 - Widget: a "Both directions" choice in the "Direction" setting (leaving it
   empty still means both).
 
+### Changed
+
+- A delay reads "11 min (dont 3 min de retard)": the words say that the
+  minutes already count it.
+
 ### Fixed
 
 - Widget: the list no longer repeats the next departure already shown in the

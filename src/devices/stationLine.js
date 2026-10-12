@@ -65,7 +65,7 @@ const LABELS = {
     summary: 'prochains passages',
     none: 'Aucun passage à venir',
     now: 'à l’arrêt',
-    late: (minutes) => `${minutes} min de retard`,
+    late: (minutes) => `dont ${minutes} min de retard`,
     last: 'dernier',
   },
   en: {
@@ -76,7 +76,7 @@ const LABELS = {
     summary: 'next departures',
     none: 'No upcoming departure',
     now: 'now',
-    late: (minutes) => `${minutes} min late`,
+    late: (minutes) => `incl. ${minutes} min delay`,
     last: 'last',
   },
 };
@@ -106,8 +106,10 @@ export function directionLabel(direction, name, language = 'fr') {
 /**
  * "3 min", "~11 min" for a timetable guess, "à l’arrêt", then in brackets the
  * delay and "dernier" for the last departure before a break in service:
- * "12 min (2 min de retard, dernier)". The minutes already count the delay:
- * the bracket says why, it is not another departure (a bare "+2" read as one).
+ * "12 min (dont 2 min de retard, dernier)". The minutes already count the
+ * delay, and the bracket says so in words: a bare "+2" read as another
+ * departure, "2 min de retard" as a delay still to add. At most 40 characters
+ * (the widget value budget) with both notes.
  * Brackets, as " · " already separates departures.
  */
 export function formatWait(departure, language = 'fr') {

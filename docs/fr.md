@@ -29,12 +29,12 @@ qui a une adresse**, dans l'ordre alphabétique.
 
 Un appareil par **ligne à une station**. Pour chaque sens de la ligne :
 
-| Fonctionnalité                      | Valeur                                                      |
-| ----------------------------------- | ----------------------------------------------------------- |
-| Sens 1 → … · **prochain passage**   | minutes avant le prochain passage (999 : aucun passage)     |
-| Sens 1 → … · **destination**        | où va ce véhicule, par exemple « La Gardette »              |
-| Sens 1 → … · **passage suivant**    | minutes avant le passage d'après                            |
-| Sens 1 → … · **prochains passages** | « La Gardette 3 min · Cenon Gare 11 min (2 min de retard) » |
+| Fonctionnalité                      | Valeur                                                           |
+| ----------------------------------- | ---------------------------------------------------------------- |
+| Sens 1 → … · **prochain passage**   | minutes avant le prochain passage (999 : aucun passage)          |
+| Sens 1 → … · **destination**        | où va ce véhicule, par exemple « La Gardette »                   |
+| Sens 1 → … · **passage suivant**    | minutes avant le passage d'après                                 |
+| Sens 1 → … · **prochains passages** | « La Gardette 3 min · Cenon Gare 11 min (dont 2 min de retard) » |
 
 Le nom de chaque fonctionnalité dit où va le sens : « Sens 1 → Hôpital Pellegrin / Le Haillan
 Rostand ». La **destination** est celle du véhicule lui-même : sur une ligne qui se divise (le tram
@@ -44,9 +44,9 @@ Dans les textes :
 
 - **~11 min** : horaire théorique, le véhicule n'est pas encore suivi en temps réel (souvent un
   tram qui n'a pas quitté son terminus) ;
-- **(2 min de retard)** : le véhicule a 2 minutes de retard sur l'horaire prévu. Les minutes
-  affichées tiennent **déjà compte** du retard : « 11 min (2 min de retard) » veut dire qu'il passe
-  dans 11 minutes, au lieu de 9 prévues ;
+- **(dont 2 min de retard)** : le véhicule a 2 minutes de retard sur l'horaire prévu, et les
+  minutes affichées en tiennent **déjà compte** : « 11 min (dont 2 min de retard) » veut dire
+  qu'il passe dans 11 minutes, au lieu de 9 prévues. Il n'y a rien à ajouter ;
 - **(dernier)** : le dernier passage de ce sens avant une coupure de plus de deux heures,
   c'est-à-dire en général le dernier de la soirée. Il est signalé jusqu'à deux heures à l'avance ;
 - **à l'arrêt** : moins d'une minute.
@@ -128,7 +128,7 @@ comme dans les noms des fonctionnalités ; vide pour les deux), les minutes.
 Chaque véhicule ne déclenche qu'une fois par seuil. Variables disponibles : station, ligne, sens,
 destination, minutes, retard, suivi en temps réel, heure, et une **phrase toute faite** :
 
-> Hôtel de Ville : Tram A vers La Gardette passe dans 5 min (17:58, 2 min de retard).
+> Hôtel de Ville : Tram A vers La Gardette passe dans 5 min (17:58, dont 2 min de retard).
 
 Exemple : envoyer la phrase sur votre téléphone quand le tram passe dans 5 minutes.
 
