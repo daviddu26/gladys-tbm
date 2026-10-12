@@ -100,19 +100,20 @@ proposés automatiquement : ajoutez-les par leur numéro dans **Stations** si be
 ## Tableau de bord
 
 Le widget **Passages TBM** affiche une ligne à une station comme un panneau d'arrêt : une tuile
-par sens avec le prochain passage, puis les prochains départs des deux sens, du plus proche au
-plus lointain — en vert s'ils sont suivis en temps réel, en gris (« ~ ») si c'est l'horaire
-théorique, en orange à partir de 5 minutes de retard ou pour le **dernier passage** de la soirée.
-Le dernier passage est aussi annoncé sous le titre : « Dernier à 00:24 → Le Haillan Rostand ».
+par sens avec le prochain passage, puis la liste des passages **suivants** (le prochain, déjà dans
+la tuile, n'y est pas répété) — en vert s'ils sont suivis en temps réel, en gris (« ~ ») si c'est
+l'horaire théorique, en orange à partir de 5 minutes de retard ou pour le **dernier passage** de la
+soirée. Le dernier passage est aussi annoncé sous le titre : « Dernier à 00:24 → Le Haillan
+Rostand ».
 
 Ajoutez-le depuis l'édition du tableau de bord, puis choisissez dans ses réglages :
 
 - **Ligne à une station** : l'appareil à afficher ;
-- **Sens** (facultatif) : « Sens 1 » ou « Sens 2 », comme dans les noms des fonctionnalités de
-  l'appareil, pour n'afficher que les passages de ce sens, avec sous le titre l'endroit où il va.
-  Laissé vide, le widget affiche les deux sens ;
-- **Passages affichés** (facultatif) : de 1 à 5 passages dans la liste. Avec « Le prochain
-  seulement », le widget n'affiche que la tuile du prochain passage de chaque sens. Laissé vide : 5.
+- **Sens** : « Les deux sens », « Sens 1 » ou « Sens 2 » (les numéros sont ceux des noms des
+  fonctionnalités de l'appareil). Avec un seul sens, l'endroit où il va est indiqué sous le titre.
+  Laissé vide : les deux sens ;
+- **Passages affichés** : combien de passages **par sens**, celui de la tuile compris. « Le prochain
+  seulement » n'affiche que la tuile ; « 3 passages », la tuile et les 2 suivants. Laissé vide : 5.
 
 Pour suivre les deux sens séparément, ajoutez deux widgets sur la même ligne, un par sens.
 

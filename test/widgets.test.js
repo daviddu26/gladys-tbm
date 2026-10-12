@@ -43,11 +43,10 @@ test('the board: a tile per direction, the departures, the timetable caption', (
     [2, '1 → Le Haillan Rostand', 'success'],
   );
   assert.deepEqual([sens2.value, sens2.label], [1, '2 → La Gardette']);
+  // The list goes on after the tiles: their departures are not repeated.
   assert.deepEqual(
     board.items.map((item) => [item.label, item.value, item.color]),
     [
-      ['A → La Gardette', '1 min', 'success'],
-      ['A → Le Haillan Rostand', '2 min (7 min de retard)', 'warning'],
       ['A → Cenon Gare', '~3 min', 'neutral'],
       ['A → Hôpital Pellegrin', '9 min', 'success'],
     ],
@@ -71,17 +70,54 @@ test('one direction chosen: its name, its tile, its departures only', () => {
   assert.equal(content.components.filter((c) => c.type === 'value').length, 1);
   assert.deepEqual(
     board.items.map((item) => item.label),
-    ['A → La Gardette', 'A → Cenon Gare'],
+    ['A → Cenon Gare'],
   );
 });
 
-test('the number of departures: 1 keeps the tiles only, 3 lists three', () => {
-  const one = departuresContent(INFO, tramA(), 'fr', { count: 1 });
+// Four departures each way, a minute apart, alternating directions.
+const busy = () =>
+  Array.from({ length: 8 }, (_, i) => ({
+    direction: String(i % 2),
+    destination: i % 2 ? 'La Gardette' : 'Le Haillan Rostand',
+    minutes: i + 1,
+    time: i,
+    realtime: true,
+    delayMinutes: 0,
+    last: false,
+  }));
+
+test('the number of departures counts the tile: 1 is the tiles only', () => {
+  const one = departuresContent(INFO, busy(), 'fr', { count: 1 });
   assert.deepEqual(validateWidgetContent(one), []);
   assert.equal(one.components.filter((c) => c.type === 'status').length, 0);
   assert.equal(one.components.filter((c) => c.type === 'value').length, 2);
-  const three = departuresContent(INFO, tramA(), 'fr', { count: 3 });
-  assert.equal(three.components.find((c) => c.type === 'status').items.length, 3);
+  // 3 per direction: the tile and the two following ones of each direction.
+  const three = departuresContent(INFO, busy(), 'fr', { count: 3 });
+  assert.deepEqual(
+    three.components.find((c) => c.type === 'status').items.map((item) => item.value),
+    ['3 min', '4 min', '5 min', '6 min'],
+  );
+  // One direction, 3: its tile and its next two.
+  const oneWay = departuresContent(INFO, busy(), 'fr', { direction: '1', count: 3 });
+  assert.deepEqual(
+    [oneWay.components.find((c) => c.type === 'value').value].concat(
+      oneWay.components.find((c) => c.type === 'status').items.map((item) => item.value),
+    ),
+    [2, '4 min', '6 min'],
+  );
+});
+
+test('no departure is shown twice, whatever the settings', () => {
+  for (const direction of [null, '0', '1']) {
+    for (let count = 1; count <= 5; count += 1) {
+      const content = departuresContent(INFO, busy(), 'fr', { direction, count });
+      const tiles = content.components
+        .filter((c) => c.type === 'value')
+        .map((c) => `${c.value} min`);
+      const rows = content.components.find((c) => c.type === 'status')?.items ?? [];
+      for (const row of rows) assert.ok(!tiles.includes(row.value), `${direction} ${count}`);
+    }
+  }
 });
 
 test('the count setting: 1 to 5, empty or wrong means 5', () => {
@@ -124,8 +160,9 @@ test('the caption keeps the most important notes within 80 characters', () => {
   assert.equal(captionText([]), null);
 });
 
-test('the direction setting: "0" or "1", anything else means both', () => {
+test('the direction setting: "0" or "1", "both" or anything else means both', () => {
   assert.equal(selectedDirection('0'), '0');
+  assert.equal(selectedDirection('both'), null);
   assert.equal(selectedDirection(1), '1');
   for (const value of [undefined, null, '', '2', 'Sens 1']) {
     assert.equal(selectedDirection(value), null);

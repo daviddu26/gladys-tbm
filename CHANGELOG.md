@@ -10,6 +10,16 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- Widget: a "Both directions" choice in the "Direction" setting (leaving it
+  empty still means both).
+
+### Fixed
+
+- Widget: the list no longer repeats the next departure already shown in the
+  tile; "Departures shown" now counts per direction, the tile included.
+
 ## [0.0.4] - 2026-10-12
 
 ## [0.0.3] - 2026-10-12

@@ -346,10 +346,11 @@
           "type": "select",
           "label": { "en": "Direction", "fr": "Sens" },
           "description": {
-            "en": "As in the feature names of the device. Empty: both directions.",
-            "fr": "Comme dans les noms des fonctionnalités de l’appareil. Vide : les deux sens."
+            "en": "One direction or both. Directions 1 and 2 as in the feature names of the device.",
+            "fr": "Un sens ou les deux. Sens 1 et 2 comme dans les noms des fonctionnalités de l’appareil."
           },
           "options": [
+            { "value": "both", "label": { "en": "Both directions", "fr": "Les deux sens" } },
             { "value": "0", "label": { "en": "Direction 1", "fr": "Sens 1" } },
             { "value": "1", "label": { "en": "Direction 2", "fr": "Sens 2" } }
           ]
@@ -359,8 +360,8 @@
           "type": "select",
           "label": { "en": "Departures shown", "fr": "Passages affichés" },
           "description": {
-            "en": "1: only the next departure of each direction. Empty: 5.",
-            "fr": "1 : seulement le prochain passage de chaque sens. Vide : 5."
+            "en": "Per direction, the next one included. 1: the next departure only. Empty: 5.",
+            "fr": "Par sens, le prochain compris. 1 : le prochain passage seulement. Vide : 5."
           },
           "options": [
             { "value": "1", "label": { "en": "Next only", "fr": "Le prochain seulement" } },

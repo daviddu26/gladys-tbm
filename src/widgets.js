@@ -65,7 +65,7 @@ function tileColor(departure) {
 // The ids of the two directions in the TBM data (DirectionRef).
 const DIRECTIONS = ['0', '1'];
 
-/** The direction chosen in the widget settings, or null for both. */
+/** The direction chosen in the widget settings, or null for both ("both", empty). */
 export function selectedDirection(value) {
   const direction = String(value ?? '').trim();
   return DIRECTIONS.includes(direction) ? direction : null;
@@ -141,7 +141,8 @@ function directionNote(rank, name) {
  * @param {object[]} departures upcoming, both directions, soonest first
  * @param {string} language
  * @param {{ direction?: string | null, count?: number }} [options] one direction
- *   ('0' or '1') or both, and how many departures to list (1: the tiles only)
+ *   ('0' or '1') or both, and how many departures per direction, the tile
+ *   included (1: the tiles only)
  */
 export function departuresContent(
   info,
@@ -205,15 +206,29 @@ export function departuresContent(
         };
   });
 
-  // One departure asked for: the tile of each direction already says it.
-  const board = count > 1 ? departures.slice(0, Math.min(count, BOARD_ROWS)) : [];
+  // The count includes the tile: the tile of a direction is its next
+  // departure, the list goes on with the following ones only (count - 1 per
+  // direction), so no departure is shown twice.
+  const inTiles = new Set(
+    shown.map((id) => departures.find((departure) => departure.direction === id)),
+  );
+  const perDirection = new Map();
+  const board = departures
+    .filter((departure) => !inTiles.has(departure))
+    .filter((departure) => {
+      const listed = perDirection.get(departure.direction) ?? 0;
+      if (listed >= count - 1) return false;
+      perDirection.set(departure.direction, listed + 1);
+      return true;
+    })
+    .slice(0, BOARD_ROWS);
   if (departures.length === 0) {
     notes.push({
       rank: 3,
       en: 'No departure in the next hours.',
       fr: 'Aucun passage dans les prochaines heures.',
     });
-  } else if (board.some((departure) => !departure.realtime)) {
+  } else if ([...inTiles, ...board].some((departure) => departure && !departure.realtime)) {
     notes.push({ rank: 4, en: '~ timetable, not tracked yet.', fr: '~ horaire théorique.' });
   }
   const text = captionText(notes);

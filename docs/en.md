@@ -74,15 +74,17 @@ them by number in **Stations** if needed.
 ## Dashboard
 
 The **TBM departures** widget shows a line at a station like a stop sign: one tile per direction
-with the next departure, then the next departures of both directions — green when tracked in real
-time, grey ("~") for a timetable time, orange from 5 minutes late or for the **last departure** of
-the evening, also announced under the title ("Last at 00:24 → Le Haillan Rostand").
+with the next departure, then the **following** departures (the next one, already in its tile, is
+not repeated) — green when tracked in real time, grey ("~") for a timetable time, orange from 5
+minutes late or for the **last departure** of the evening, also announced under the title ("Last
+at 00:24 → Le Haillan Rostand").
 
-In its settings, choose the **line at a station** and, optionally, a **direction** ("Direction 1"
-or "Direction 2", as in the feature names of the device) to show only that direction, with where
-it goes under the title. Left empty, the widget shows both. Add two widgets for the same line to
-follow each direction on its own. **Departures shown** lists 1 to 5 departures; "Next only" keeps
-the tile of each direction alone. Left empty: 5.
+In its settings, choose the **line at a station**, the **direction** ("Both directions",
+"Direction 1" or "Direction 2", numbered as in the feature names of the device; with one direction,
+where it goes is shown under the title) and the **departures shown** per direction, the tile
+included: "Next only" keeps the tiles alone, "3 departures" is the tile and the 2 following. Left
+empty: both directions, 5 departures. Add two widgets for the same line to follow each direction on
+its own.
 
 ## Scenes
 
