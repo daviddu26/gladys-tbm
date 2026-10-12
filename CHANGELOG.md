@@ -15,6 +15,11 @@ the notes of the version's GitHub Release.
 - Dashboard widget "TBM departures": a "Direction" setting shows a single
   direction (its tile, its departures and where it goes); empty keeps both.
 
+### Changed
+
+- New cover image: a tram crossing the stone bridge at dusk, in front of the
+  Bordeaux skyline.
+
 ## [0.0.1] - 2026-10-12
 
 ### Added
