@@ -104,8 +104,8 @@
       "type": "section",
       "label": { "en": "Journeys from the house", "fr": "Trajets depuis la maison" },
       "description": {
-        "en": "The best journeys from your house to the places you go, in real time, with the night lines and the disruptions. Planned by Transitous, a free community service.",
-        "fr": "Les meilleurs trajets de votre maison vers les endroits où vous allez, en temps réel, avec les lignes de nuit et les perturbations. Calculés par Transitous, un service communautaire gratuit."
+        "en": "The best journeys from your house to the destinations of your choice, in real time. Takes the night timetables and the disruptions into account. Planned by Transitous, a free community service.",
+        "fr": "Les trajets optimaux de votre maison vers les destinations de votre choix, en temps réel. Prend en compte les horaires de nuit et les perturbations. Calculés par Transitous, un service communautaire gratuit."
       },
       "links": [
         {
