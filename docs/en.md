@@ -109,9 +109,11 @@ included: "Next only" keeps the tiles alone, "3 departures" is the tile and the 
 empty: both directions, 5 departures. Add two widgets for the same line to follow each direction on
 its own.
 
-The **TBM journey** widget shows a journey: a tile with **in how many minutes to leave** and when
-you arrive, the lines to take above it (and what disrupts the journey, if anything), and the
-**next options** below, never repeating the tile's. Settings: the **journey** and the **journeys
+The **TBM journey** widget shows a journey: a tile with **in how many minutes to leave**, the lines
+and the arrival ("Lianes 4 › TER → 22:00"), the detail with the time of each line above it ("Lianes
+4 21:45 → TER ~21:53", and what disrupts the journey, if anything), and the **next options** below,
+never repeating the tile's. A **"~"** marks a timetable time: that vehicle is not tracked in real
+time (often a TER, whose real time Transitous lacks). Settings: the **journey** and the **journeys
 shown** ("Best only" to 5, the best included; empty: 5).
 
 ## Scenes

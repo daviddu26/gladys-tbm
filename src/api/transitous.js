@@ -192,20 +192,38 @@ const parseTime = (value) => {
   return Number.isFinite(ms) ? ms : null;
 };
 
+// Trains are named by their kind ("TER"): their route names are train numbers
+// ("TER 866266", seen live on 2026-10-12), of no use to choose a train.
+const RAIL_MODES = new Set([
+  'RAIL',
+  'REGIONAL_RAIL',
+  'REGIONAL_FAST_RAIL',
+  'SUBURBAN',
+  'HIGHSPEED_RAIL',
+  'LONG_DISTANCE',
+  'NIGHT_RAIL',
+]);
+
 /**
  * The name of a transit leg as people say it: the TBM directory knows that
- * the tram "A" is "Tram A" and the bus "4" is "Lianes 4"; any other network
- * (a TER) falls back on the mode and the route.
+ * the tram "A" is "Tram A" and the bus "4" is "Lianes 4"; a train is "TER";
+ * any other line (a regional coach) is its mode and route, the mode not
+ * repeated when the route already starts with it.
  * @param {object} leg
  * @param {(code: string) => string | undefined} lineName from the TBM directory
  */
 export function legLineName(leg, lineName = () => undefined) {
-  const short = String(leg?.routeShortName ?? '').replace(/^0+(?=.)/, '');
+  const short = String(leg?.routeShortName ?? '')
+    .trim()
+    .replace(/^0+(?=.)/, '');
   const known = short ? lineName(short) : undefined;
   if (known) return known;
   const mode = TRANSIT_NAMES[leg?.mode]?.fr ?? '';
-  const route = short || leg?.displayName || leg?.routeLongName || '';
-  return [mode, route].filter(Boolean).join(' ') || 'Transport';
+  if (RAIL_MODES.has(leg?.mode)) return mode || 'Train';
+  const route = String(short || leg?.displayName || leg?.routeLongName || '').trim();
+  if (!route) return mode || 'Transport';
+  if (mode && route.toLowerCase().startsWith(mode.toLowerCase())) return route;
+  return [mode, route].filter(Boolean).join(' ');
 }
 
 /**

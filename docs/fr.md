@@ -161,11 +161,15 @@ Pour suivre les deux sens séparément, ajoutez deux widgets sur la même ligne,
 
 ### Widget « Trajet TBM »
 
-Pour un trajet : une tuile dit **dans combien de minutes partir** et à quelle heure vous arrivez ;
-au-dessus, les lignes à prendre (et ce qui perturbe le trajet, s'il y a lieu) ; en dessous, les
-**options suivantes**, sans répéter celle de la tuile. Vert : suivi en temps réel ; gris : horaire
-théorique ; orange : perturbation ou retard d'au moins 5 minutes ; rouge : une course du trajet est
-supprimée.
+Pour un trajet : une tuile dit **dans combien de minutes partir**, les lignes à prendre et l'heure
+d'arrivée (« Lianes 4 › TER → 22:00 ») ; au-dessus, le détail avec l'heure de chaque ligne
+(« Lianes 4 21:45 → TER ~21:53 ») et ce qui perturbe le trajet, s'il y a lieu ; en dessous, les
+**options suivantes**, sans répéter celle de la tuile.
+
+Un **« ~ »** devant une heure veut dire qu'elle vient de la fiche horaire : ce véhicule n'est pas
+suivi en temps réel (souvent un TER, dont Transitous n'a pas le temps réel, ou un tram pas encore
+parti de son terminus). Couleurs : vert, suivi en temps réel ; gris, horaire théorique ; orange,
+perturbation ou retard d'au moins 5 minutes ; rouge, une course du trajet est supprimée.
 
 Réglages : le **trajet**, et les **trajets affichés** (de « Le meilleur seulement » à 5, le meilleur
 compris ; vide : 5).

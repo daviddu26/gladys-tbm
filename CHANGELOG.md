@@ -10,6 +10,14 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Journey widget: the tile shows the lines to take and the arrival
+  ("Lianes 4 › TER → 22:00"), not only the arrival.
+- A train is named "TER", not "TER TER 866266" (its train number).
+- The timetable note of a journey marks each time without real time with
+  "~" ("TER ~21:53") instead of a note for the whole journey.
+
 ## [0.0.6] - 2026-10-12
 
 ### Added

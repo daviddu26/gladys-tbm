@@ -95,10 +95,11 @@ MonitoredCall.{AimedDepartureTime, ExpectedDepartureTime, ...}}`. No expected
   light use — contact the maintainers (Matrix) before the integration gets many
   users. Hence `trips_poll_frequency` (300 s, 120 s minimum) and the places
   geocoded once and kept in `/data/places.json`.
-- **Not checked against the live API yet**: api.transitous.org was out of reach
-  of the development sandbox on 2026-10-12. `test/helpers/transitous.js`
-  follows the OpenAPI; check a real answer (route short names of TBM, alerts)
-  on the first live run and fix the fixtures with it.
+- api.transitous.org is out of reach of the development sandbox: the
+  fixtures (`test/helpers/transitous.js`) follow the OpenAPI. Seen live on
+  2026-10-12 (user's Gladys): the TBM route short names resolve through the
+  directory ("Lianes 4", "Locale 80", "Lianes 9"); a TER comes with no real
+  time and a train number as its name ("TER 866266"), hence "TER" alone.
 - Device params `trip_name`, `trip_address` rebuild a created journey; its
   platform id is the slug of the name (`tripSlug`): renaming a journey makes a
   new device.

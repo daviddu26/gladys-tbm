@@ -108,11 +108,16 @@ function lineNameFromDirectory(code) {
   return lines.find((line) => line.code === code)?.name;
 }
 
-/** "Tram A 18:12 → Lianes 9 18:31", or on foot. */
+/**
+ * "Tram A 18:12 → TER ~18:31", or on foot. A time without real time (a TER,
+ * a tram not left its terminus yet) is marked "~", as on the departures.
+ */
 export function formatRoute(journey, language = 'fr') {
   if (!journey) return LABELS[language].none;
   if (journey.walkOnly) return LABELS[language].walk(journey.durationMinutes);
-  return journey.legs.map((leg) => `${leg.line} ${formatClock(leg.start)}`).join(' → ');
+  return journey.legs
+    .map((leg) => `${leg.line} ${leg.realtime ? '' : '~'}${formatClock(leg.start)}`)
+    .join(' → ');
 }
 
 /** "18:05 → 18:47 · 18:15 → 18:55". */

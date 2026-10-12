@@ -312,19 +312,23 @@ export function journeyContent(info, journeys, language = 'fr', { count = DEFAUL
     rank: 2,
     fit: (room) => ({ en: truncate(route.en, room.en), fr: truncate(route.fr, room.fr) }),
   });
-  if (!best.walkOnly && !best.realtime) {
-    notes.push({ rank: 3, en: '~ timetable.', fr: '~ horaire théorique.' });
+  // Explains the "~" of the route: which part has no real time is in it.
+  if (!best.walkOnly && best.legs.some((leg) => !leg.realtime)) {
+    notes.push({ rank: 3, en: '(~ timetable time)', fr: '(~ horaire théorique)' });
   }
   const text = captionText(notes);
   if (text) components.push({ type: 'text', variant: WIDGET_TEXT_VARIANTS.CAPTION, text });
 
+  // The tile says what to take and when you arrive: "Lianes 4 › TER → 22:00",
+  // the lines cut first, the arrival always kept (24 characters at most).
+  const arrival = ` → ${formatClock(best.end)}`;
   components.push({
     type: 'value',
     value: best.leaveMinutes,
     unit: 'min',
     label: {
-      en: truncate(`leave · arrive ${formatClock(best.end)}`, 24),
-      fr: truncate(`partir · arrivée ${formatClock(best.end)}`, 24),
+      en: `${truncate(journeyLines(best, 'en'), 24 - arrival.length)}${arrival}`,
+      fr: `${truncate(journeyLines(best, 'fr'), 24 - arrival.length)}${arrival}`,
     },
     icon: 'clock',
     color: journeyColor(best),

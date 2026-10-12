@@ -99,7 +99,11 @@ test('a plan answer becomes journeys: lines named as people say them, soonest fi
 });
 
 test('a line unknown to TBM is named by its mode', () => {
-  assert.equal(legLineName({ mode: 'REGIONAL_RAIL', routeShortName: 'K32' }), 'TER K32');
+  // A train is "TER": its route name is a train number (seen live: "TER 866266").
+  assert.equal(legLineName({ mode: 'REGIONAL_RAIL', routeShortName: 'K32' }), 'TER');
+  assert.equal(legLineName({ mode: 'REGIONAL_RAIL', displayName: 'TER 866266' }), 'TER');
+  // The mode is not repeated when the route already says it.
+  assert.equal(legLineName({ mode: 'COACH', routeShortName: 'Car 406' }), 'Car 406');
   assert.equal(legLineName({ mode: 'BUS', routeShortName: '', displayName: '83' }), 'Bus 83');
   assert.equal(legLineName({ mode: 'TRAM', routeShortName: 'A' }, lineName), 'Tram A');
 });
@@ -178,6 +182,8 @@ test('the texts of a journey', () => {
   const [, best, lianes, cancelled] = parsePlan(planPayload(), lineName);
   assert.equal(formatRoute(best), `Tram A ${clock(7)} → Tram F ${clock(14)}`);
   assert.equal(formatRoute(undefined), 'Aucun trajet trouvé');
+  // A leg without real time is marked "~", as on the departures.
+  assert.equal(formatRoute(lianes), `Lianes 2 ~${clock(14)}`);
   assert.equal(
     formatOptions([best, lianes], 3),
     `${clock(4)} → ${clock(25)} · ${clock(11)} → ${clock(34)}`,
@@ -274,7 +280,7 @@ test('the journey widget: when to leave, the lines, the next options without the
   assert.equal(caption.text.fr, `Tram A ${clock(7)} → Tram F ${clock(14)}`);
   assert.deepEqual(
     [tile.value, tile.label.fr, tile.color],
-    [4, `partir · arrivée ${clock(25)}`, 'success'],
+    [4, `Tram A › Tram F → ${clock(25)}`, 'success'],
   );
   assert.deepEqual(
     list.items.map((item) => [item.label, item.value, item.color]),
