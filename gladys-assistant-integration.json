@@ -6,8 +6,8 @@
     "en": "Real-time departures of the TBM trams, buses and boats (Bordeaux), by direction.",
     "fr": "Prochains passages en temps réel des trams, bus et bateaux TBM (Bordeaux), par sens."
   },
-  "version": "0.0.5",
-  "docker_image": "ghcr.io/daviddu26/gladys-tbm:0.0.5",
+  "version": "0.0.6",
+  "docker_image": "ghcr.io/daviddu26/gladys-tbm:0.0.6",
   "gladys_version": ">=5.1.0",
   "cover_image": "https://raw.githubusercontent.com/daviddu26/gladys-tbm/main/cover.png",
   "categories": ["services"],

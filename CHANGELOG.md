@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [0.0.6] - 2026-10-12
+
 ### Added
 
 - Journeys from the house: up to 5 destinations typed as "Name: address" in
@@ -93,7 +95,8 @@ the notes of the version's GitHub Release.
 - The network directory is read once a day and kept in `/data`: a restart or an
   API outage keeps the stations known.
 
-[Unreleased]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.5...HEAD
+[Unreleased]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.6...HEAD
+[0.0.6]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/daviddu26/gladys-tbm/compare/v0.0.2...v0.0.3
