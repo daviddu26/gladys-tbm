@@ -10,6 +10,15 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Changed
+
+- Journeys are ranked by arrival time, not departure: the tile shows the one
+  that gets you there first; the list reads "Arrivée 22:00 · Lianes 4 › TER",
+  "partir dans 2 min".
+- The route names the stop of each change: "Lianes 4 21:45, changer à Gare
+  Saint-Jean : TER ~21:53", and the walk when the next line leaves from
+  another stop.
+
 ### Fixed
 
 - Journey widget: the tile shows the lines to take and the arrival

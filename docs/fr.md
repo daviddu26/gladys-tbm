@@ -106,14 +106,14 @@ jusqu'au premier arrêt et depuis le dernier. Ils sont calculés par Transitous 
 TBM : une course supprimée, un retard, un arrêt déplacé, ou la fin du service des trams (les bus
 de nuit prennent le relais) changent le trajet proposé.
 
-| Fonctionnalité        | Valeur                                                                   |
-| --------------------- | ------------------------------------------------------------------------ |
-| **partir dans**       | minutes avant de quitter la maison (999 : aucun trajet trouvé)           |
-| **durée**             | minutes de la maison à la destination                                    |
-| **arrivée**           | heure d'arrivée, « 18:47 »                                               |
-| **itinéraire**        | les lignes à prendre, « Tram A 18:12 → Tram F 18:19 »                    |
-| **prochains départs** | les options suivantes, « 18:05 → 18:47 · 18:15 → 18:55 »                 |
-| **état**              | « Normal », « Retard de 4 min », « Perturbé : … », « Horaire théorique » |
+| Fonctionnalité        | Valeur                                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------ |
+| **partir dans**       | minutes avant de quitter la maison (999 : aucun trajet trouvé)                                   |
+| **durée**             | minutes de la maison à la destination                                                            |
+| **arrivée**           | heure d'arrivée, « 18:47 »                                                                       |
+| **itinéraire**        | les lignes et les correspondances, « Tram A 18:12, changer à Porte de Bourgogne : Tram F 18:19 » |
+| **prochains départs** | les options suivantes, « 18:05 → 18:47 · 18:15 → 18:55 »                                         |
+| **état**              | « Normal », « Retard de 4 min », « Perturbé : … », « Horaire théorique »                         |
 
 Un trajet est **recalculé toutes les 5 minutes** (réglage **Recalcul des trajets**, 2 minutes au
 plus vite) : Transitous est un service bénévole qui demande un usage modéré. Entre deux calculs,
@@ -163,8 +163,13 @@ Pour suivre les deux sens séparément, ajoutez deux widgets sur la même ligne,
 
 Pour un trajet : une tuile dit **dans combien de minutes partir**, les lignes à prendre et l'heure
 d'arrivée (« Lianes 4 › TER → 22:00 ») ; au-dessus, le détail avec l'heure de chaque ligne
-(« Lianes 4 21:45 → TER ~21:53 ») et ce qui perturbe le trajet, s'il y a lieu ; en dessous, les
-**options suivantes**, sans répéter celle de la tuile.
+et les correspondances (« Lianes 4 21:45, changer à Gare Saint-Jean : TER ~21:53 ») et ce qui
+perturbe le trajet, s'il y a lieu ; en dessous, les **options suivantes**, sans répéter celle de la
+tuile.
+
+Les trajets sont **classés par heure d'arrivée** : la tuile montre celui qui vous fait arriver le
+plus tôt, même s'il part plus tard qu'un autre. Quand une correspondance demande de marcher jusqu'à
+un autre arrêt, l'itinéraire le dit (« descendre à …, à pied jusqu'à … »).
 
 Un **« ~ »** devant une heure veut dire qu'elle vient de la fiche horaire : ce véhicule n'est pas
 suivi en temps réel (souvent un TER, dont Transitous n'a pas le temps réel, ou un tram pas encore

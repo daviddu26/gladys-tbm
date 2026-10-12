@@ -69,7 +69,7 @@ last. [Transitous](https://transitous.org) plans them with the TBM real time: a 
 delay, a moved stop, or the end of the tram service (the night buses take over) change the journey.
 
 Features: **leave in** (minutes before leaving the house, 999: none), **duration**, **arrival**
-("18:47"), **route** ("Tram A 18:12 → Tram F 18:19"), **next departures** ("18:05 → 18:47 · 18:15 →
+("18:47"), **route** ("Tram A 18:12, change at Porte de Bourgogne: Tram F 18:19"), **next departures** ("18:05 → 18:47 · 18:15 →
 18:55"), **status** ("Normal", "4 min late", "Disrupted: …", "Timetable"; or why the journey cannot
 be planned, and what to do).
 
@@ -110,9 +110,7 @@ empty: both directions, 5 departures. Add two widgets for the same line to follo
 its own.
 
 The **TBM journey** widget shows a journey: a tile with **in how many minutes to leave**, the lines
-and the arrival ("Lianes 4 › TER → 22:00"), the detail with the time of each line above it ("Lianes
-4 21:45 → TER ~21:53", and what disrupts the journey, if anything), and the **next options** below,
-never repeating the tile's. A **"~"** marks a timetable time: that vehicle is not tracked in real
+and the arrival ("Lianes 4 › TER → 22:00"), the detail with the time of each line above it ("Lianes 4 21:45, change at Gare Saint-Jean: TER ~21:53", and what disrupts the journey, if anything), and the **next options** below, never repeating the tile's. Journeys are **ranked by arrival**: the tile shows the one getting you there first, even if it leaves later than another; a change that needs a walk to another stop says so. A **"~"** marks a timetable time: that vehicle is not tracked in real
 time (often a TER, whose real time Transitous lacks). Settings: the **journey** and the **journeys
 shown** ("Best only" to 5, the best included; empty: 5).
 
