@@ -17,7 +17,7 @@ the notes of the version's GitHub Release.
 
 ### Changed
 
-- New cover image: a tram crossing the stone bridge at dusk, in front of the
+- New cover image: a tram crossing the stone bridge by day, in front of the
   Bordeaux skyline.
 
 ## [0.0.1] - 2026-10-12
