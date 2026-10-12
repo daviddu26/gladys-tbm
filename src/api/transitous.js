@@ -12,9 +12,10 @@
 // Its usage policy (https://transitous.org/api/): open-source, non-commercial
 // use, a User-Agent naming the application and a contact, and staying light —
 // routing is its expensive endpoint. Hence: an address is geocoded once and
-// kept in /data, and a journey is planned again at most every few minutes
-// (`trips_poll_frequency`, 2 minutes at the fastest), the countdowns moving in
-// between from the times already known.
+// kept in /data, and a journey is planned again only when the first journey of
+// the last plan has left; in between, the journeys are refreshed (almost free)
+// every `trips_poll_frequency` seconds, the countdowns moving from the times
+// already known.
 //
 // The shapes below follow the OpenAPI of MOTIS v2.10.2 (/api/v6/plan,
 // /api/v1/geocode), the version Transitous documented on 2026-10-12.
@@ -227,70 +228,90 @@ export function legLineName(leg, lineName = () => undefined) {
 }
 
 /**
- * The itineraries of a plan answer, soonest ARRIVAL first: what matters is
- * when you get there. At the same arrival, the one leaving last comes first
- * (less waiting on the way).
- *
- * @param {unknown} payload
+ * One itinerary of an answer (a plan, or a refresh), or null when its times
+ * cannot be read.
+ * @param {object} itinerary
  * @param {(code: string) => string | undefined} [lineName]
  * @returns {{ id: string, start: number, end: number, durationMinutes: number,
  *   transfers: number, realtime: boolean, cancelled: boolean, delayMinutes: number,
  *   walkOnly: boolean, legs: { line: string, headsign: string, from: string, to: string,
  *   start: number, end: number, realtime: boolean, cancelled: boolean,
- *   delayMinutes: number }[], alerts: string[] }[]}
+ *   delayMinutes: number }[], alerts: string[] } | null}
+ */
+export function parseItinerary(itinerary, lineName) {
+  const start = parseTime(itinerary?.startTime);
+  const end = parseTime(itinerary?.endTime);
+  if (start === null || end === null) return null;
+  const legs = [];
+  const alerts = new Set();
+  for (const leg of Array.isArray(itinerary.legs) ? itinerary.legs : []) {
+    for (const alert of [...(leg?.alerts ?? []), ...(leg?.from?.alerts ?? [])]) {
+      const header = String(alert?.headerText ?? '').trim();
+      if (header) alerts.add(header);
+    }
+    // Walking, cycling...: part of the duration, not a line to take.
+    if (!leg?.routeShortName && !leg?.routeId && !leg?.tripId) continue;
+    const legStart = parseTime(leg.startTime);
+    const scheduled = parseTime(leg.scheduledStartTime);
+    legs.push({
+      line: legLineName(leg, lineName),
+      headsign: String(leg.headsign ?? '').trim(),
+      from: String(leg.from?.name ?? '').trim(),
+      to: String(leg.to?.name ?? '').trim(),
+      start: legStart,
+      end: parseTime(leg.endTime),
+      realtime: leg.realTime === true,
+      cancelled: leg.cancelled === true,
+      delayMinutes:
+        legStart !== null && scheduled !== null ? Math.round((legStart - scheduled) / 60_000) : 0,
+    });
+  }
+  return {
+    id: String(itinerary.id ?? ''),
+    start,
+    end,
+    durationMinutes: Math.round((end - start) / 60_000),
+    transfers: Number.isFinite(itinerary.transfers) ? itinerary.transfers : 0,
+    realtime: legs.some((leg) => leg.realtime),
+    cancelled: legs.some((leg) => leg.cancelled),
+    delayMinutes: Math.max(0, ...legs.map((leg) => leg.delayMinutes)),
+    walkOnly: legs.length === 0,
+    legs,
+    alerts: [...alerts],
+  };
+}
+
+/**
+ * Soonest ARRIVAL first: what matters is when you get there. At the same
+ * arrival, the one leaving last comes first (less waiting on the way).
+ */
+export function byArrival(a, b) {
+  return a.end - b.end || b.start - a.start;
+}
+
+/**
+ * The itineraries of a plan answer, soonest arrival first.
+ * @param {unknown} payload
+ * @param {(code: string) => string | undefined} [lineName]
  */
 export function parsePlan(payload, lineName) {
   if (!payload || !Array.isArray(payload.itineraries)) {
     throw new TransitousError('plan: no itineraries in the answer');
   }
-  const itineraries = [];
-  for (const itinerary of payload.itineraries) {
-    const start = parseTime(itinerary?.startTime);
-    const end = parseTime(itinerary?.endTime);
-    if (start === null || end === null) continue;
-    const legs = [];
-    const alerts = new Set();
-    for (const leg of Array.isArray(itinerary.legs) ? itinerary.legs : []) {
-      for (const alert of [...(leg?.alerts ?? []), ...(leg?.from?.alerts ?? [])]) {
-        const header = String(alert?.headerText ?? '').trim();
-        if (header) alerts.add(header);
-      }
-      // Walking, cycling...: part of the duration, not a line to take.
-      if (!leg?.routeShortName && !leg?.routeId && !leg?.tripId) continue;
-      const legStart = parseTime(leg.startTime);
-      const scheduled = parseTime(leg.scheduledStartTime);
-      legs.push({
-        line: legLineName(leg, lineName),
-        headsign: String(leg.headsign ?? '').trim(),
-        from: String(leg.from?.name ?? '').trim(),
-        to: String(leg.to?.name ?? '').trim(),
-        start: legStart,
-        end: parseTime(leg.endTime),
-        realtime: leg.realTime === true,
-        cancelled: leg.cancelled === true,
-        delayMinutes:
-          legStart !== null && scheduled !== null ? Math.round((legStart - scheduled) / 60_000) : 0,
-      });
-    }
-    itineraries.push({
-      id: String(itinerary.id ?? ''),
-      start,
-      end,
-      durationMinutes: Math.round((end - start) / 60_000),
-      transfers: Number.isFinite(itinerary.transfers) ? itinerary.transfers : 0,
-      realtime: legs.some((leg) => leg.realtime),
-      cancelled: legs.some((leg) => leg.cancelled),
-      delayMinutes: Math.max(0, ...legs.map((leg) => leg.delayMinutes)),
-      walkOnly: legs.length === 0,
-      legs,
-      alerts: [...alerts],
-    });
-  }
-  return itineraries.sort((a, b) => a.end - b.end || b.start - a.start);
+  return payload.itineraries
+    .map((itinerary) => parseItinerary(itinerary, lineName))
+    .filter(Boolean)
+    .sort(byArrival);
 }
 
+// What the plan and the refresh are asked the same way: the polylines and
+// turn-by-turn steps are for a map, not asked, the answers stay small.
+const LIGHT = { detailedLegs: 'false', detailedTransfers: 'false', language: 'fr' };
+
 /**
- * The journeys from one point to another, leaving from `now`.
+ * The journeys from one point to another, leaving from `now`. The expensive
+ * endpoint of Transitous: called only when there is no plan yet, or when the
+ * first journey of the last plan has left (src/devices/trip.js).
  * @param {{ lat: number, lon: number }} from
  * @param {{ lat: number, lon: number }} to
  * @param {{ now?: number, count?: number, lineName?: (code: string) => string | undefined }} [options]
@@ -301,11 +322,31 @@ export async function planJourneys(from, to, { now = Date.now(), count = 5, line
     toPlace: `${to.lat},${to.lon}`,
     time: new Date(now).toISOString(),
     numItineraries: String(count),
-    // The polylines and turn-by-turn steps are for a map: not asked, the
-    // answer stays small.
-    detailedLegs: 'false',
-    detailedTransfers: 'false',
-    language: 'fr',
+    ...LIGHT,
   });
   return parsePlan(payload, lineName);
+}
+
+/**
+ * The same journey with the latest real time (delays, cancellations), from
+ * its id. Almost free for Transitous, unlike a new plan: this is what keeps a
+ * planned journey up to date (asked by the Transitous team, 2026-10-12).
+ *
+ * @param {string} id the `id` of an itinerary of a plan
+ * @param {{ lineName?: (code: string) => string | undefined }} [options]
+ * @returns {Promise<ReturnType<typeof parseItinerary>>} null when the journey
+ *   can no longer be rebuilt (a trip of it gone from the timetable)
+ */
+export async function refreshJourney(id, { lineName } = {}) {
+  let payload;
+  try {
+    payload = await getJson('/v6/refresh-itinerary', { itineraryId: id, ...LIGHT });
+  } catch (err) {
+    // 400: the itinerary cannot be rebuilt any more; the caller plans again.
+    if (err instanceof TransitousError && err.status === 400) return null;
+    throw err;
+  }
+  const journey = parseItinerary(payload, lineName);
+  // The refreshed itinerary may come back without an id: keep the one known.
+  return journey && !journey.id ? { ...journey, id } : journey;
 }

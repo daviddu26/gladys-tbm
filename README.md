@@ -51,9 +51,10 @@ The feed has no cancellation flag: a vehicle not tracked yet shows its timetable
 
 **Journeys** come from [Transitous](https://transitous.org/api/) (MOTIS 2): `/api/v1/geocode`
 finds the addresses typed by the user near the house (kept in `/data`), `/api/v6/plan` plans the
-journeys from the house, with the TBM real time Transitous loads. Its policy (open source,
-non-commercial, a User-Agent with a contact, light use) is why a journey is planned again every 5
-minutes at most by default, 2 at the fastest.
+journeys from the house, with the TBM real time Transitous loads. As the Transitous team asked, a
+journey is planned again only when the first journey of the last plan has left; in between, the
+journeys found are kept up to date with `/api/v6/refresh-itinerary`, almost free for Transitous
+(every 2 minutes by default).
 
 ## Development
 

@@ -93,8 +93,15 @@ MonitoredCall.{AimedDepartureTime, ExpectedDepartureTime, ...}}`. No expected
   TripUpdates, SIRI-Lite): delays, cancellations and the night lines come with
   the plan. Policy: open source, non-commercial, User-Agent with a contact,
   light use — contact the maintainers (Matrix) before the integration gets many
-  users. Hence `trips_poll_frequency` (300 s, 120 s minimum) and the places
-  geocoded once and kept in `/data/places.json`.
+  users. Hence the places geocoded once and kept in `/data/places.json`.
+- **Plan as little as possible** (asked by the Transitous team, GitHub issue,
+  2026-10-12): `/v6/plan` recomputes everything on rare compute resources.
+  A new plan only when there is none, the address changed, or the departure
+  of the earliest journey of the last plan has come (`needsNewPlan`); in
+  between, every `trips_poll_frequency` (120 s), each journey still to come is
+  refreshed with `/v6/refresh-itinerary?itineraryId=` (almost free). A journey
+  it cannot rebuild (HTTP 400) is dropped; none left plans again. They also
+  asked for an explicit LICENSE file (Apache-2.0, at the root).
 - api.transitous.org is out of reach of the development sandbox: the
   fixtures (`test/helpers/transitous.js`) follow the OpenAPI. Seen live on
   2026-10-12 (user's Gladys): the TBM route short names resolve through the

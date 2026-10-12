@@ -153,13 +153,13 @@
     {
       "key": "trips_poll_frequency",
       "type": "number",
-      "label": { "en": "Journeys recalculation (s)", "fr": "Recalcul des trajets (s)" },
+      "label": { "en": "Journeys update (s)", "fr": "Mise à jour des trajets (s)" },
       "description": {
-        "en": "How often the journeys are planned again, in seconds (2 minutes minimum: Transitous asks for a light use). The countdowns move every minute in between.",
-        "fr": "Fréquence de recalcul des trajets, en secondes (2 minutes minimum : Transitous demande un usage modéré). Les comptes à rebours avancent chaque minute entre deux calculs."
+        "en": "How often the real time of the journeys is updated, in seconds (2 minutes minimum). A full new calculation only happens when the first journey proposed leaves, as Transitous asks.",
+        "fr": "Fréquence de mise à jour du temps réel des trajets, en secondes (2 minutes minimum). Un nouveau calcul complet n’a lieu qu’au départ du premier trajet proposé, comme le demande Transitous."
       },
       "required": false,
-      "default": 300,
+      "default": 120,
       "min": 120,
       "max": 1800
     },

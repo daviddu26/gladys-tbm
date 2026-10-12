@@ -82,23 +82,25 @@ Features: **leave in** (minutes before leaving the house, 999: none), **duration
 18:55"), **status** ("Normal", "4 min late", "Disrupted: …", "Timetable"; or why the journey cannot
 be planned, and what to do).
 
-A journey is planned again **every 5 minutes** (**Journeys recalculation**, 2 minutes at the
-fastest): Transitous is a volunteer service asking for a light use. In between, "leave in" counts
+Transitous is a volunteer service asking for a light use. The integration therefore makes a **full
+calculation** of the journeys only at first, then each time the first journey proposed has left.
+In between, it **updates the real time** of the journeys already found (delays, cancellations)
+every **2 minutes** (**Journeys update**), which costs Transitous almost nothing. "Leave in" counts
 down every minute.
 
 ## Settings
 
-| Setting                    | Role                                                   | Default |
-| -------------------------- | ------------------------------------------------------ | ------- |
-| Stations near my home      | how many close stations are proposed (0: none)         | 3       |
-| Search radius (m)          | the farthest a proposed station may be from the house  | 600     |
-| Include the school buses   | also propose the SCODI school lines                    | no      |
-| Stations                   | stations typed by hand                                 | empty   |
-| Refresh interval (s)       | how often the departures are read                      | 60      |
-| Departures in the summary  | departures per direction in the "next departures" text | 3       |
-| Journeys                   | destinations of the journeys from the house            | empty   |
-| Journeys recalculation (s) | how often the journeys are planned, 120 at least       | 300     |
-| Language of the values     | language of the feature names and texts                | French  |
+| Setting                   | Role                                                             | Default |
+| ------------------------- | ---------------------------------------------------------------- | ------- |
+| Stations near my home     | how many close stations are proposed (0: none)                   | 3       |
+| Search radius (m)         | the farthest a proposed station may be from the house            | 600     |
+| Include the school buses  | also propose the SCODI school lines                              | no      |
+| Stations                  | stations typed by hand                                           | empty   |
+| Refresh interval (s)      | how often the departures are read                                | 60      |
+| Departures in the summary | departures per direction in the "next departures" text           | 3       |
+| Journeys                  | destinations of the journeys from the house                      | empty   |
+| Journeys update (s)       | how often the real time of the journeys is updated, 120 at least | 120     |
+| Language of the values    | language of the feature names and texts                          | French  |
 
 Replacement buses during works ("Navette Tram", "Bus Relais") are not proposed automatically: add
 them by number in **Stations** if needed.

@@ -10,6 +10,19 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Changed
+
+- Journeys: as the Transitous team asked, a full calculation (their
+  expensive endpoint) is only made at first, then when the first journey
+  proposed has left; in between, the journeys found are kept up to date
+  with the real time (delays, cancellations) through their refresh endpoint,
+  almost free for them, every 2 minutes by default. The setting is now
+  "Journeys update".
+
+### Added
+
+- An explicit LICENSE file (Apache License 2.0), as the README already said.
+
 ## [0.1.0] - 2026-10-12
 
 ### Changed

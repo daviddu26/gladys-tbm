@@ -119,26 +119,28 @@ de nuit prennent le relais) changent le trajet proposé.
 | **prochains départs** | les options suivantes, « 18:05 → 18:47 · 18:15 → 18:55 »                                         |
 | **état**              | « Normal », « Retard de 4 min », « Perturbé : … », « Horaire théorique »                         |
 
-Un trajet est **recalculé toutes les 5 minutes** (réglage **Recalcul des trajets**, 2 minutes au
-plus vite) : Transitous est un service bénévole qui demande un usage modéré. Entre deux calculs,
-« partir dans » continue de décompter chaque minute.
+Transitous est un service bénévole qui demande un usage modéré. L'intégration fait donc un **calcul
+complet** des trajets seulement au début, puis à chaque fois que le premier trajet proposé est
+parti. Entre deux, elle **met à jour le temps réel** des trajets déjà trouvés (retards,
+suppressions) toutes les **2 minutes** (réglage **Mise à jour des trajets**), ce qui ne coûte
+presque rien à Transitous. « Partir dans » décompte chaque minute.
 
 Si un trajet ne peut pas être calculé (maison sans adresse, adresse introuvable, Transitous
 indisponible), son **état** dit pourquoi et que faire.
 
 ## Réglages
 
-| Réglage                   | Rôle                                                             | Défaut   |
-| ------------------------- | ---------------------------------------------------------------- | -------- |
-| Stations près de chez moi | combien de stations proches sont proposées (0 : aucune)          | 3        |
-| Rayon de recherche (m)    | distance maximale entre la maison et une station proposée        | 600      |
-| Inclure les bus scolaires | proposer aussi les lignes scolaires SCODI                        | non      |
-| Stations                  | stations saisies à la main (voir plus haut)                      | vide     |
-| Rafraîchissement (s)      | fréquence de lecture des passages                                | 60       |
-| Passages dans le résumé   | nombre de passages par sens dans le texte « prochains passages » | 3        |
-| Trajets                   | destinations des trajets depuis la maison (voir plus haut)       | vide     |
-| Recalcul des trajets (s)  | fréquence de calcul des trajets, 120 au minimum                  | 300      |
-| Langue des valeurs        | langue des noms de fonctionnalités et des textes                 | français |
+| Réglage                     | Rôle                                                               | Défaut   |
+| --------------------------- | ------------------------------------------------------------------ | -------- |
+| Stations près de chez moi   | combien de stations proches sont proposées (0 : aucune)            | 3        |
+| Rayon de recherche (m)      | distance maximale entre la maison et une station proposée          | 600      |
+| Inclure les bus scolaires   | proposer aussi les lignes scolaires SCODI                          | non      |
+| Stations                    | stations saisies à la main (voir plus haut)                        | vide     |
+| Rafraîchissement (s)        | fréquence de lecture des passages                                  | 60       |
+| Passages dans le résumé     | nombre de passages par sens dans le texte « prochains passages »   | 3        |
+| Trajets                     | destinations des trajets depuis la maison (voir plus haut)         | vide     |
+| Mise à jour des trajets (s) | fréquence de mise à jour du temps réel des trajets, 120 au minimum | 120      |
+| Langue des valeurs          | langue des noms de fonctionnalités et des textes                   | français |
 
 Les **bus de remplacement** pendant des travaux (« Navette Tram », « Bus Relais ») ne sont pas
 proposés automatiquement : ajoutez-les par leur numéro dans **Stations** si besoin.

@@ -13,6 +13,7 @@ import {
   geocode,
   legLineName,
   parsePlan,
+  refreshJourney,
 } from '../src/api/transitous.js';
 import {
   buildBlueprints,
@@ -32,7 +33,7 @@ import {
 import { journeyContent, JOURNEY_WIDGET, WIDGETS } from '../src/widgets.js';
 import { CITY_HALL_HOUSE, useFixtureDirectory } from './helpers/directory.js';
 import { NOW } from './helpers/fixtures.js';
-import { planPayload } from './helpers/transitous.js';
+import { planPayload, refreshPayload } from './helpers/transitous.js';
 import { stubFetch } from './helpers/stubFetch.js';
 
 const PLACES = () => join(process.env.TBM_DATA_DIR, 'places.json');
@@ -66,8 +67,8 @@ test('the journeys field: "Name: address", separated by semicolons, five at most
   assert.equal(tripSlug('  Trajet du Matin !'), 'trajet-du-matin');
 });
 
-test('the journeys recalculation: 5 minutes by default, 2 minutes at the fastest', () => {
-  assert.equal(normalizeConfig({}).trips_poll_frequency, 300);
+test('the journeys update: 2 minutes by default and at the fastest', () => {
+  assert.equal(normalizeConfig({}).trips_poll_frequency, 120);
   assert.equal(normalizeConfig({ trips_poll_frequency: 30 }).trips_poll_frequency, 120);
   assert.equal(normalizeConfig({ trips_poll_frequency: '600' }).trips_poll_frequency, 600);
 });
@@ -159,12 +160,17 @@ test('a namesake far from the house is not the place meant', async (t) => {
   assert.ok(distanceMeters(HOME, { lat: 48.85, lon: 2.35 }) > 400_000);
 });
 
-test('a journey is planned from the house, then reused until the interval', async (t) => {
+const paths = (calls, path) => calls.filter((url) => url.pathname === path);
+const PLAN = '/api/v6/plan';
+const REFRESH = '/api/v6/refresh-itinerary';
+
+test('a journey is planned once, refreshed until its first departure, then planned again', async (t) => {
   t.mock.timers.enable({ apis: ['Date'], now: NOW });
   const { calls } = stubFetch(t);
   const gladys = createFakeGladys({ houses: [CITY_HALL_HOUSE] });
   const trip = createTripBlueprint(GARE);
-  const first = await trip.read(gladys, config(), { now: NOW });
+  const cfg = config({ trips_poll_frequency: 120 });
+  const first = await trip.read(gladys, cfg, { now: NOW });
   // The journey that left two minutes ago is gone; the next leaves in 4.
   assert.deepEqual(
     first.journeys.map((journey) => [journey.id, journey.leaveMinutes]),
@@ -174,19 +180,87 @@ test('a journey is planned from the house, then reused until the interval', asyn
       ['it-3', 19],
     ],
   );
-  const plan = calls.find((url) => url.pathname === '/api/v6/plan');
+  const [plan] = paths(calls, PLAN);
   assert.equal(plan.searchParams.get('fromPlace'), `${HOME.lat},${HOME.lon}`);
   assert.equal(plan.searchParams.get('toPlace'), '44.8258,-0.5563');
   assert.equal(plan.searchParams.get('detailedLegs'), 'false');
 
-  // Two minutes later: no new plan, the countdown moved.
-  const later = await trip.read(gladys, config(), { now: NOW + 120_000 });
-  assert.equal(later.journeys[0].leaveMinutes, 2);
-  assert.equal(calls.filter((url) => url.pathname === '/api/v6/plan').length, 1);
+  // A minute later, within the interval: nothing asked, the countdown moved.
+  const later = await trip.read(gladys, cfg, { now: NOW + 60_000 });
+  assert.equal(later.journeys[0].leaveMinutes, 3);
+  assert.equal(calls.length, 2); // the geocode and the plan
 
-  // Past the interval (5 minutes): planned again.
-  await trip.read(gladys, config(), { now: NOW + 301_000 });
-  assert.equal(calls.filter((url) => url.pathname === '/api/v6/plan').length, 2);
+  // Past the interval, before the first departure (in 4 minutes): each
+  // journey still to come is refreshed, none planned again.
+  await trip.read(gladys, cfg, { now: NOW + 121_000 });
+  assert.equal(paths(calls, PLAN).length, 1);
+  assert.deepEqual(
+    paths(calls, REFRESH)
+      .map((url) => url.searchParams.get('itineraryId'))
+      .sort(),
+    ['it-1', 'it-2', 'it-3'],
+  );
+  assert.equal(paths(calls, REFRESH)[0].searchParams.get('detailedLegs'), 'false');
+
+  // The first journey has left (4 minutes): now a new plan.
+  await trip.read(gladys, cfg, { now: NOW + 4 * 60_000 });
+  assert.equal(paths(calls, PLAN).length, 2);
+});
+
+test('a refresh brings the real time in: a delay, a journey no longer possible', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: NOW });
+  stubFetch(t, {
+    'refresh-itinerary': (url) =>
+      url.searchParams.get('itineraryId') === 'it-2'
+        ? { status: 400 } // cannot be rebuilt any more: dropped
+        : refreshPayload(url, (itinerary) => {
+            // The tram A now 6 minutes late: arrives 6 minutes later.
+            itinerary.endTime = new Date(Date.parse(itinerary.endTime) + 6 * 60_000).toISOString();
+            for (const leg of itinerary.legs.filter((l) => l.routeShortName === 'A')) {
+              leg.startTime = new Date(Date.parse(leg.startTime) + 6 * 60_000).toISOString();
+            }
+            return itinerary;
+          }),
+  });
+  const gladys = createFakeGladys({ houses: [CITY_HALL_HOUSE] });
+  const trip = createTripBlueprint(GARE);
+  const cfg = config({ trips_poll_frequency: 120 });
+  await trip.read(gladys, cfg, { now: NOW });
+  const { journeys } = await trip.read(gladys, cfg, { now: NOW + 121_000 });
+  assert.deepEqual(
+    journeys.map((journey) => journey.id),
+    ['it-1', 'it-3'],
+  );
+  assert.equal(journeys[0].end, NOW + 31 * 60_000);
+  assert.equal(journeys[0].delayMinutes, 7);
+});
+
+test('a failed refresh keeps the journeys known; nothing left to refresh plans again', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: NOW });
+  const down = stubFetch(t, { 'refresh-itinerary': { status: 503 } });
+  const gladys = createFakeGladys({ houses: [CITY_HALL_HOUSE] });
+  const trip = createTripBlueprint(GARE);
+  const cfg = config({ trips_poll_frequency: 120 });
+  await trip.read(gladys, cfg, { now: NOW });
+  const kept = await trip.read(gladys, cfg, { now: NOW + 121_000 });
+  assert.equal(kept.journeys.length, 3);
+  assert.equal(paths(down.calls, PLAN).length, 1);
+  globalThis.fetch.mock.restore();
+
+  // Every journey can no longer be rebuilt: nothing left, planned again.
+  const gone = stubFetch(t, { 'refresh-itinerary': { status: 400 } });
+  clearPlans();
+  await trip.read(gladys, cfg, { now: NOW });
+  await trip.read(gladys, cfg, { now: NOW + 121_000 });
+  assert.equal(paths(gone.calls, PLAN).length, 2);
+});
+
+test('refreshJourney: the same journey up to date, null when it cannot be rebuilt', async (t) => {
+  stubFetch(t);
+  const journey = await refreshJourney('it-1', { lineName });
+  assert.equal(journey.id, 'it-1');
+  assert.equal(journey.legs[0].line, 'Tram A');
+  assert.equal(await refreshJourney('unknown'), null);
 });
 
 test('without a house address, or with an address not found, the journey says why', async (t) => {
@@ -296,7 +370,7 @@ test('a widget set up with the wrong kind of device says which one it expects', 
   assert.equal(findSelectedBlueprint(gladys, gare, config(), TRIP_TYPE).slug, 'gare');
 });
 
-test('the journeys are polled every minute, planned only at the interval', async (t) => {
+test('the journeys are polled every minute, without asking Transitous each time', async (t) => {
   t.mock.timers.enable({ apis: ['Date'], now: NOW });
   const { calls } = stubFetch(t);
   const gladys = createFakeGladys({ houses: [CITY_HALL_HOUSE] });

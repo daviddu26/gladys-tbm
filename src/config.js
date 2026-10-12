@@ -25,13 +25,14 @@ export const DEFAULT_CONFIG = {
   max_departures: 3,
   // Journeys from the house, one per line: "Travail : 1 place Pey Berland".
   trips: '',
-  // Seconds between two journey plans (Transitous). Planning is its expensive
-  // endpoint: every five minutes, the countdowns moving in between.
-  trips_poll_frequency: 300,
+  // Seconds between two updates of the real time of the journeys (Transitous
+  // refresh-itinerary, almost free for it). A new plan, its expensive call,
+  // is only made when the first journey of the last plan leaves (trip.js).
+  trips_poll_frequency: 120,
   language: 'fr',
 };
 
-/** At most this many journeys: each one is a plan every few minutes. */
+/** At most this many journeys: each one asks Transitous regularly. */
 export const MAX_TRIPS = 5;
 
 /** The bounds of the numeric settings, the same as the manifest's. */

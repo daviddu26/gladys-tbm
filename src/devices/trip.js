@@ -17,9 +17,11 @@
 //   prochains départs    "18:05 → 18:47 · 18:15 → 18:55"
 //   état                 "Normal", "Retard de 4 min", "Perturbé : …"
 //
-// A plan is asked at most every `trips_poll_frequency` seconds (5 minutes by
-// default): the Transitous policy asks to stay light. Gladys polls every
-// minute; in between, the countdown moves from the times already known.
+// As the Transitous team asked: a plan (their expensive call) only when there
+// is none, or when the first journey of the last plan has left; in between,
+// each journey is refreshed with the real time every `trips_poll_frequency`
+// seconds (2 minutes by default, almost free for them). Gladys polls every
+// minute; the countdown moves from the times already known.
 // -----------------------------------------------------------------------------
 
 import {
@@ -31,7 +33,13 @@ import {
 } from '@gladysassistant/integration-sdk';
 import { formatClock } from '../api/departures.js';
 import { getDirectory } from '../api/directory.js';
-import { geocode, planJourneys, TransitousError } from '../api/transitous.js';
+import {
+  byArrival,
+  geocode,
+  planJourneys,
+  refreshJourney,
+  TransitousError,
+} from '../api/transitous.js';
 import { homeLocation } from './suggestions.js';
 
 export const DEVICE_TYPE = 'trip';
@@ -162,6 +170,21 @@ export function formatStatus(journey, language = 'fr') {
 /** Whole minutes before leaving: 0 means "now". */
 const minutesUntil = (time, now) => Math.max(0, Math.floor((time - now) / 60_000));
 
+/**
+ * A new plan is made only when needed, as the Transitous team asks: none yet,
+ * the address changed, or the departure of the earliest journey of the plan
+ * has come. Until then, the journeys are refreshed instead (refreshAll).
+ */
+export function needsNewPlan(plan, entry, now) {
+  if (!plan || plan.address !== entry.address) return true;
+  // A journey already gone when planned (none should be) does not count.
+  const starts = plan.journeys
+    .map((journey) => journey.start)
+    .filter((start) => start >= plan.at - PAST_TOLERANCE_MS);
+  if (starts.length === 0) return true;
+  return now >= Math.min(...starts);
+}
+
 /** The last plan of each journey: shared by the poll, the widget and the scenes. */
 const plans = new Map();
 
@@ -182,41 +205,72 @@ export function createTripBlueprint(entry) {
    * than the configured interval, or when its journeys have all left.
    */
   async function read(gladys, config, { now = Date.now(), fresh = false } = {}) {
-    const known = plans.get(entry.slug);
-    const maxAge = config.trips_poll_frequency * 1000;
-    const stillValid = (plan) =>
-      plan.address === entry.address &&
-      now - plan.at < maxAge &&
-      plan.journeys.some((journey) => journey.start >= now - PAST_TOLERANCE_MS);
-    let plan = known;
-    if (fresh || !known || !stillValid(known)) {
-      const home = await homeLocation(gladys);
-      if (!home) {
-        throw new TripError('the house has no location', {
-          en: 'Give your house an address in Gladys (Settings → Houses): journeys start from it.',
-          fr: 'Donnez une adresse à votre maison dans Gladys (Paramètres → Maisons) : les trajets partent de là.',
-        });
-      }
-      const place = await geocode(entry.address, home);
-      if (!place) {
-        throw new TripError(`address not found: ${entry.address}`, {
-          en: `"${entry.address}" was not found near the house: add the town, e.g. "${entry.address}, Bordeaux".`,
-          fr: `« ${entry.address} » est introuvable près de la maison : ajoutez la ville, ex. « ${entry.address}, Bordeaux ».`,
-        });
-      }
-      const journeys = await planJourneys(home, place, {
-        now,
-        count: JOURNEYS_ASKED,
-        lineName: lineNameFromDirectory,
-      });
-      plan = { at: now, address: entry.address, home, place, journeys };
-      plans.set(entry.slug, plan);
-      logger.debug(`${entry.slug}: ${journeys.length} journey(s) planned`);
+    let plan = plans.get(entry.slug);
+    if (fresh || needsNewPlan(plan, entry, now)) {
+      plan = await planAgain(gladys, now);
+    } else if (now - plan.refreshedAt >= config.trips_poll_frequency * 1000) {
+      plan = await refreshAll(gladys, plan, now);
     }
     const journeys = plan.journeys
       .filter((journey) => journey.start >= now - PAST_TOLERANCE_MS)
       .map((journey) => ({ ...journey, leaveMinutes: minutesUntil(journey.start, now) }));
-    return { journeys, place: plan.place, plannedAt: plan.at };
+    return { journeys, place: plan.place, plannedAt: plan.at, refreshedAt: plan.refreshedAt };
+  }
+
+  /** A new plan (/plan): the expensive call. */
+  async function planAgain(gladys, now) {
+    const home = await homeLocation(gladys);
+    if (!home) {
+      throw new TripError('the house has no location', {
+        en: 'Give your house an address in Gladys (Settings → Houses): journeys start from it.',
+        fr: 'Donnez une adresse à votre maison dans Gladys (Paramètres → Maisons) : les trajets partent de là.',
+      });
+    }
+    const place = await geocode(entry.address, home);
+    if (!place) {
+      throw new TripError(`address not found: ${entry.address}`, {
+        en: `"${entry.address}" was not found near the house: add the town, e.g. "${entry.address}, Bordeaux".`,
+        fr: `« ${entry.address} » est introuvable près de la maison : ajoutez la ville, ex. « ${entry.address}, Bordeaux ».`,
+      });
+    }
+    const journeys = await planJourneys(home, place, {
+      now,
+      count: JOURNEYS_ASKED,
+      lineName: lineNameFromDirectory,
+    });
+    const plan = { at: now, refreshedAt: now, address: entry.address, home, place, journeys };
+    plans.set(entry.slug, plan);
+    logger.debug(`${entry.slug}: ${journeys.length} journey(s) planned`);
+    return plan;
+  }
+
+  /**
+   * The journeys of the plan brought up to date one by one (/refresh-itinerary,
+   * almost free). A journey that can no longer be rebuilt is dropped; when
+   * none is left, or when Transitous fails, the plan is made again or kept.
+   */
+  async function refreshAll(gladys, plan, now) {
+    // Only the journeys still to come: a gone one is worth no request.
+    const upcoming = plan.journeys.filter((journey) => journey.start >= now - PAST_TOLERANCE_MS);
+    let refreshed;
+    try {
+      refreshed = await Promise.all(
+        upcoming.map((journey) =>
+          journey.id ? refreshJourney(journey.id, { lineName: lineNameFromDirectory }) : journey,
+        ),
+      );
+    } catch (err) {
+      // Keep the journeys known, and try again at the next interval only.
+      logger.warn(`${entry.slug}: refresh failed, journeys kept: ${err.message}`);
+      plan.refreshedAt = now;
+      return plan;
+    }
+    const journeys = refreshed.filter(Boolean).sort(byArrival);
+    if (journeys.length === 0) return planAgain(gladys, now);
+    const next = { ...plan, refreshedAt: now, journeys };
+    plans.set(entry.slug, next);
+    logger.debug(`${entry.slug}: ${journeys.length} journey(s) refreshed`);
+    return next;
   }
 
   return {

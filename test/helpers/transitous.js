@@ -139,3 +139,16 @@ export function planPayload() {
     nextPageCursor: 'n',
   };
 }
+
+/**
+ * A refresh-itinerary answer: the itinerary of the plan with the id asked,
+ * changed by `change` (a delay, a cancellation), or an HTTP 400 when the id is
+ * unknown, as Transitous answers for an itinerary it cannot rebuild.
+ * @param {URL} url
+ * @param {(itinerary: object) => object} [change]
+ */
+export function refreshPayload(url, change = (itinerary) => itinerary) {
+  const id = url.searchParams.get('itineraryId');
+  const found = planPayload().itineraries.find((itinerary) => itinerary.id === id);
+  return found ? change(structuredClone(found)) : { status: 400 };
+}
