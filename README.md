@@ -1,5 +1,7 @@
 # Gladys TBM
 
+> **Beta.** Feedback welcome in the [issues](https://github.com/daviddu26/gladys-tbm/issues).
+
 External integration for [Gladys Assistant](https://gladysassistant.com) that brings the TBM
 network of Bordeaux Métropole (trams, buses, boats) into your smart home:
 

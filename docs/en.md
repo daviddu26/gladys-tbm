@@ -5,10 +5,19 @@ network (Bordeaux Métropole) into Gladys, **direction by direction**: for each 
 station, you know in how many minutes the next vehicle of each direction leaves, and where it
 goes.
 
-No account, no key: the TBM real time is open data.
+It also plans your **journeys from the house** to the addresses you choose (work, school, station…):
+when to leave, which lines, when you arrive — in real time, with the night lines and the
+disruptions.
+
+No account, no key: the TBM real time is open data, and the journeys are planned by
+[Transitous](https://transitous.org), a free community service.
 
 > Community integration, not affiliated with TBM, Keolis Bordeaux Métropole Mobilités nor Bordeaux
 > Métropole.
+
+> **Beta version.** Departures and journeys work, but the integration is young: report any issue
+> or idea on [GitHub](https://github.com/daviddu26/gladys-tbm/issues), with a screenshot if you
+> can.
 
 ## Getting started
 

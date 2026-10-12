@@ -15,6 +15,10 @@ calculés par [Transitous](https://transitous.org), un service communautaire gra
 > Intégration communautaire, sans lien avec TBM, Keolis Bordeaux Métropole Mobilités ou Bordeaux
 > Métropole.
 
+> **Version bêta.** Les passages et les trajets fonctionnent, mais l'intégration est jeune :
+> signalez tout souci ou idée sur [GitHub](https://github.com/daviddu26/gladys-tbm/issues), avec
+> une capture d'écran si possible.
+
 ## Démarrer
 
 1. **Donnez une adresse à votre maison** dans Gladys : **Paramètres → Maisons**. L'intégration

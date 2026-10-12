@@ -10,6 +10,12 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Changed
+
+- First public beta: published in the Gladys store. The documentation says
+  so and where to report issues; the English documentation now presents the
+  journeys too.
+
 ## [0.0.7] - 2026-10-12
 
 ### Changed
