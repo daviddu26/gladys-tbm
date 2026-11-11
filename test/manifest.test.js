@@ -107,6 +107,11 @@ test('scene triggers, scene actions and widgets require Gladys >= 5.1.0', () => 
   assert.ok(manifest.categories.length >= 1 && manifest.categories.length <= 3);
 });
 
+test('countries requires Gladys >= 5.3.0: Bordeaux public transport, France only', () => {
+  assert.ok(isAtLeast(minGladysVersion(), [5, 3, 0]));
+  assert.deepEqual(manifest.countries, ['FR']);
+});
+
 test('config_schema defaults stay consistent with DEFAULT_CONFIG', () => {
   for (const field of manifest.config_schema) {
     if (field.type === 'section') continue;

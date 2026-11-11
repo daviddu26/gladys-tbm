@@ -33,7 +33,7 @@ User documentation: [français](docs/fr.md) · [English](docs/en.md).
 | Scene action     | read the next departure                                                                   |
 | Buttons          | find a station by name, test the connection                                               |
 
-Requires Gladys **5.1.0** or later.
+Requires Gladys **5.3.0** or later.
 
 ## How it works
 
